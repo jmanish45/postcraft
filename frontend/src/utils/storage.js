@@ -1,0 +1,94 @@
+const STORAGE_KEY = "postcraft_saved_posts_v2";
+const COOLDOWN_KEY = "postcraft_last_post_time";
+export const COOLDOWN_DURATION_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+export function getSavedPosts() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.error("Failed to load saved posts from localStorage", err);
+    return [];
+  }
+}
+
+export function savePostsToStorage(posts) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+  } catch (err) {
+    console.error("Failed to save posts to localStorage", err);
+  }
+}
+
+export function clearSavedPostsFromStorage() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (err) {
+    console.error("Failed to clear posts from localStorage", err);
+  }
+}
+
+// 15-Minute Safety Cooldown storage
+export function getLastPostTime() {
+  try {
+    const val = localStorage.getItem(COOLDOWN_KEY);
+    return val ? parseInt(val, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function setLastPostTimeToNow() {
+  try {
+    const now = Date.now();
+    localStorage.setItem(COOLDOWN_KEY, now.toString());
+    return now;
+  } catch {
+    return Date.now();
+  }
+}
+
+export function clearLastPostTime() {
+  try {
+    localStorage.removeItem(COOLDOWN_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function getRemainingCooldownMs() {
+  const lastTime = getLastPostTime();
+  if (!lastTime) return 0;
+  const elapsed = Date.now() - lastTime;
+  const remaining = COOLDOWN_DURATION_MS - elapsed;
+  return remaining > 0 ? remaining : 0;
+}
+
+// User-provided API Keys (stored securely on their own device)
+export function getUserApiKey(provider = "groq") {
+  try {
+    return localStorage.getItem(`postcraft_apikey_${provider}`) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveUserApiKey(provider = "groq", key = "") {
+  try {
+    if (key.trim()) {
+      localStorage.setItem(`postcraft_apikey_${provider}`, key.trim());
+    } else {
+      localStorage.removeItem(`postcraft_apikey_${provider}`);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function clearUserApiKey(provider = "groq") {
+  try {
+    localStorage.removeItem(`postcraft_apikey_${provider}`);
+  } catch {
+    // ignore
+  }
+}
