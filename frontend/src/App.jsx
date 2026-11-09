@@ -117,8 +117,15 @@ export default function App() {
     };
 
     try {
-      const apiBase = import.meta.env.VITE_API_URL || "";
-      const response = await fetch(`${apiBase}/api/generate-posts`, {
+      // Clean and sanitize API base URL (handles accidental trailing slashes and double /api prefixes)
+      let apiBase = (import.meta.env.VITE_API_URL || "").trim();
+      apiBase = apiBase.replace(/\/+$/, "");
+      if (apiBase.endsWith("/api")) {
+        apiBase = apiBase.slice(0, -4);
+      }
+      const endpoint = apiBase ? `${apiBase}/api/generate-posts` : "/api/generate-posts";
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

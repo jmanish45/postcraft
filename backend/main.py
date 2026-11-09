@@ -24,7 +24,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for frontend flexibility across any deployment domain
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,6 +34,7 @@ app.add_middleware(
 
 
 @app.get("/api/health")
+@app.get("/health")
 def health_check():
     return {
         "status": "healthy",
@@ -46,9 +46,16 @@ def health_check():
     "/api/generate-posts",
     response_model=GenerateResponse
 )
+@app.post(
+    "/generate-posts",
+    response_model=GenerateResponse
+)
+@app.post(
+    "/api/api/generate-posts",
+    response_model=GenerateResponse
+)
 async def generate_posts(request: GenerateRequest):
 
-    # Validate that the submitted samples contain actual text.
     valid_samples = [
         sample for sample in request.samples
         if sample.content.strip()
@@ -63,7 +70,6 @@ async def generate_posts(request: GenerateRequest):
     request.samples = valid_samples
 
     try:
-        # Run AI drafting in threadpool to keep FastAPI async loop responsive.
         result = await run_in_threadpool(
             generate_drafts,
             request
@@ -105,7 +111,6 @@ async def generate_posts(request: GenerateRequest):
         )
 
 
-# If frontend production build exists (frontend/dist), serve it automatically
 dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/dist"))
 if os.path.exists(dist_dir):
     app.mount("/", StaticFiles(directory=dist_dir, html=True), name="frontend")
