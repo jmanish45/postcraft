@@ -21,12 +21,9 @@ export default function Header({
             className="h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
           />
 
-          <div className="flex flex-col">
+          <div>
             <span className="font-heading text-base font-extrabold tracking-tight sm:text-lg leading-tight text-neutral-950">
               Postcraft
-            </span>
-            <span className="hidden sm:block text-[9px] font-semibold tracking-wider uppercase text-neutral-400 -mt-0.5">
-              Ideas to Impactful Posts
             </span>
           </div>
         </div>
