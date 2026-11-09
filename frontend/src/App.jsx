@@ -19,6 +19,7 @@ import Header from "./components/Header";
 import SampleCard from "./components/SampleCard";
 import GeneratedPosts from "./components/GeneratedPosts";
 import ApiKeyPage from "./components/ApiKeyPage";
+import IntroSplash from "./components/IntroSplash";
 import {
   getSavedPosts,
   savePostsToStorage,
@@ -28,6 +29,16 @@ import {
 } from "./utils/storage";
 
 export default function App() {
+  const [showIntro, setShowIntro] = useState(() => {
+    // Show aesthetic intro splash on initial website open
+    return !sessionStorage.getItem("postcraft_intro_viewed");
+  });
+
+  const handleIntroFinish = () => {
+    sessionStorage.setItem("postcraft_intro_viewed", "true");
+    setShowIntro(false);
+  };
+
   const [posts, setPosts] = useState(() => getSavedPosts());
   const [activeTab, setActiveTab] = useState(() => {
     // If user already has saved drafts, default to drafts tab, else create tab
@@ -208,6 +219,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] text-[#111] antialiased">
+      {/* Aesthetic Intro Splash on Initial Opening */}
+      {showIntro && <IntroSplash onFinish={handleIntroFinish} />}
+
       {/* Sticky Header with Mobile-Ready Segment Navigation */}
       <Header
         activeTab={activeTab}
@@ -230,50 +244,69 @@ export default function App() {
         {/* VIEW 1: GENERATE / CREATE POSTS */}
         {activeTab === "create" && (
           <div className="mx-auto max-w-2xl space-y-6 animate-in fade-in duration-200">
-            {/* Hero Section */}
-            <section className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 shadow-xs">
-                  <Sparkles size={12} />
-                  AI Editorial Assistant
+            {/* Hero Section with Aesthetic Logo Integration */}
+            <section className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 border-b border-neutral-100 pb-5">
+                <div className="space-y-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 shadow-2xs">
+                      <Sparkles size={12} />
+                      AI Editorial Assistant
+                    </div>
+
+                    {/* Live Groq Key Status Indicator */}
+                    {hasStoredKey ? (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("key")}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-700 hover:border-black transition shadow-2xs"
+                        title="Click to view or edit your saved Groq key"
+                      >
+                        <ShieldCheck size={12} className="text-emerald-600 stroke-[2.5]" />
+                        <span>Groq Key Active</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("key")}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-neutral-100 px-3 py-1 text-[11px] font-semibold text-neutral-800 hover:bg-neutral-200 transition shadow-2xs"
+                        title="Click to insert your free Groq key"
+                      >
+                        <KeyRound size={12} className="text-neutral-900" />
+                        <span>
+                          Key Needed · <span className="underline font-bold">Insert Groq Key</span>
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
+                  <h1 className="font-heading text-3xl font-extrabold tracking-tight sm:text-4xl text-neutral-950">
+                    Create Distinct
+                    <br />
+                    <span className="text-neutral-400">X (Twitter) Posts</span>
+                  </h1>
+
+                  <p className="text-xs leading-6 text-neutral-500 sm:text-sm max-w-lg">
+                    Add 1 to 10 source posts. The AI will craft original, non-duplicate
+                    drafts (250–279 chars) and save them to your device so you can post them one by one.
+                  </p>
                 </div>
 
-                {/* Live Groq Key Status Indicator */}
-                {hasStoredKey ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("key")}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-700 hover:border-black transition shadow-2xs"
-                    title="Click to view or edit your saved Groq key"
-                  >
-                    <ShieldCheck size={12} className="text-emerald-600 stroke-[2.5]" />
-                    <span>Groq Key Active</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("key")}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-neutral-100 px-3 py-1 text-[11px] font-semibold text-neutral-800 hover:bg-neutral-200 transition shadow-2xs"
-                    title="Click to insert your free Groq key"
-                  >
-                    <KeyRound size={12} className="text-neutral-900" />
-                    <span>
-                      Key Needed · <span className="underline font-bold">Insert Groq Key</span>
-                    </span>
-                  </button>
-                )}
+                {/* Floating Aesthetic Logo Card */}
+                <div className="flex sm:flex-col items-center justify-center gap-3 p-3.5 rounded-2xl border border-neutral-200/80 bg-white shadow-2xs group self-start sm:self-center transition hover:border-neutral-300">
+                  <div className="relative">
+                    <div className="absolute -inset-2 rounded-full bg-neutral-200/40 blur-lg animate-logo-glow" />
+                    <img
+                      src="/logo.png"
+                      alt="Postcraft Logo"
+                      className="relative h-16 sm:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-105 animate-logo-float"
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 hidden sm:block">
+                    Ideas to Impactful Posts
+                  </span>
+                </div>
               </div>
-
-              <h1 className="font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Create Distinct
-                <br />
-                <span className="text-neutral-400">X (Twitter) Posts</span>
-              </h1>
-
-              <p className="text-xs leading-6 text-neutral-500 sm:text-sm">
-                Add 1 to 10 source posts. The AI will craft original, non-duplicate
-                drafts and save them to your device so you can post them one by one.
-              </p>
 
               {/* Notice if old drafts exist from a previous session */}
               {posts.length > 0 && (

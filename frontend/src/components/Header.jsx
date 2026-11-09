@@ -12,15 +12,21 @@ export default function Header({
         {/* Brand */}
         <div
           onClick={() => setActiveTab("create")}
-          className="flex cursor-pointer items-center gap-2.5 transition active:scale-95"
+          className="group flex cursor-pointer items-center gap-2.5 transition active:scale-95 select-none"
+          title="Postcraft — Ideas to Impactful Posts"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white shadow-xs">
-            <Sparkles size={16} />
-          </div>
+          <img
+            src="/logo-mark.png"
+            alt="Postcraft"
+            className="h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+          />
 
-          <div>
-            <span className="font-heading text-base font-extrabold tracking-tight sm:text-lg">
+          <div className="flex flex-col">
+            <span className="font-heading text-base font-extrabold tracking-tight sm:text-lg leading-tight text-neutral-950">
               Postcraft
+            </span>
+            <span className="hidden sm:block text-[9px] font-semibold tracking-wider uppercase text-neutral-400 -mt-0.5">
+              Ideas to Impactful Posts
             </span>
           </div>
         </div>
