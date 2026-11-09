@@ -45,5 +45,6 @@ export function calculateTwitterLength(text) {
   return urlWeight + textWeight;
 }
 
-export const TWITTER_MAX_LENGTH = 280;
+export const TWITTER_MAX_LENGTH = 279;
+export const TWITTER_MIN_LENGTH = 250;
 

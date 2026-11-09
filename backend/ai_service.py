@@ -93,8 +93,9 @@ def _generate_with_groq(request: GenerateRequest) -> GenerateResponse:
 
     groq_system_prompt = (
         SYSTEM_PROMPT
-        + '\nCRITICAL JSON FORMAT: Return strictly a valid JSON object with the root key "generated_posts": '
-        '{"generated_posts": [{"content": "post with hashtag", "based_on": ["Sample 1"], "verification_status": "verified"|"needs_review"}]}'
+        + '\nCRITICAL JSON FORMAT & LENGTH: Return strictly a valid JSON object with the root key "generated_posts". '
+        'Every post content MUST be between 250 and 279 characters in total (including spaces and hashtags): '
+        '{"generated_posts": [{"content": "richly detailed post with required hashtags (strictly 250 to 279 chars)", "based_on": ["Sample 1"], "verification_status": "verified"|"needs_review"}]}'
     )
 
     payload = {

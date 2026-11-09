@@ -392,23 +392,37 @@ export default function GeneratedPosts({
                 <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-neutral-300 bg-neutral-100 p-2.5 text-xs font-medium text-neutral-800">
                   <AlertTriangle size={13} className="shrink-0 text-neutral-700" />
                   <span>
-                    Exceeds X limit by {charCount - TWITTER_MAX_LENGTH} characters. Shorten before posting.
+                    Exceeds maximum limit of 279 characters by {charCount - TWITTER_MAX_LENGTH}. Shorten before posting.
                   </span>
                 </div>
               )}
 
               {/* Card Footer */}
               <div className="mt-4 flex flex-col gap-2.5 border-t border-neutral-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                {/* Character Counter */}
-                <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+                {/* Character Counter with 250-279 indicator */}
+                <div className="flex items-center gap-1.5 text-xs">
                   <span
                     className={`font-semibold tabular-nums ${
-                      isOverLimit ? "font-bold text-neutral-900 underline" : "text-neutral-700"
+                      isOverLimit
+                        ? "font-bold text-neutral-900 underline"
+                        : charCount >= 250
+                        ? "font-bold text-emerald-700"
+                        : "text-neutral-500"
                     }`}
                   >
                     {charCount}
                   </span>
-                  <span>/ {TWITTER_MAX_LENGTH} X chars</span>
+                  <span className="text-neutral-400">/ 279 chars</span>
+                  {charCount >= 250 && charCount <= 279 && (
+                    <span className="ml-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                      Optimal (250–279)
+                    </span>
+                  )}
+                  {charCount < 250 && (
+                    <span className="text-[10px] text-neutral-400">
+                      (target 250–279)
+                    </span>
+                  )}
                 </div>
 
                 {/* Action Buttons: Sleek & Modern */}
