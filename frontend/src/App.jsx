@@ -20,6 +20,7 @@ import SampleCard from "./components/SampleCard";
 import GeneratedPosts from "./components/GeneratedPosts";
 import ApiKeyPage from "./components/ApiKeyPage";
 import IntroSplash from "./components/IntroSplash";
+import LanguageDropdown from "./components/LanguageDropdown";
 import {
   getSavedPosts,
   savePostsToStorage,
@@ -379,20 +380,12 @@ export default function App() {
               </div>
 
               {/* 3. OUTPUT LANGUAGE */}
-              <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-xs space-y-2">
+              <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-xs space-y-2.5">
                 <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-neutral-700">
                   <Globe size={13} />
                   <span>3. Output Language</span>
                 </label>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-3 text-base sm:text-sm font-semibold outline-none transition focus:border-black focus:bg-white"
-                >
-                  <option>English</option>
-                  <option>Hindi</option>
-                  <option>Hinglish</option>
-                </select>
+                <LanguageDropdown value={language} onChange={setLanguage} />
               </div>
 
               {/* 4. NUMBER OF DRAFTS */}

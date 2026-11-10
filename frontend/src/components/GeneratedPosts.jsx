@@ -312,7 +312,7 @@ export default function GeneratedPosts({
           return (
             <article
               key={post.id || index}
-              className={`rounded-2xl border bg-white p-4 sm:p-5 shadow-2xs transition ${
+              className={`overflow-hidden rounded-2xl border bg-white p-3.5 sm:p-5 shadow-2xs transition ${
                 isThisPostPosted
                   ? "border-neutral-200 bg-neutral-50/70"
                   : "border-neutral-200 hover:border-neutral-300"
@@ -425,56 +425,58 @@ export default function GeneratedPosts({
                   )}
                 </div>
 
-                {/* Action Buttons: Sleek & Modern */}
-                <div className="flex items-center gap-2">
-                  {!isEditing && (
+                {/* Action Buttons: Sleek & Modern (Fully responsive, fits mobile without overflow) */}
+                <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-1.5 sm:gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {!isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartEdit(post)}
+                        className="flex h-8 sm:h-9 items-center justify-center gap-1 rounded-xl border border-neutral-200 bg-white px-2.5 sm:px-3 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black active:scale-95 shadow-2xs"
+                      >
+                        <Pencil size={11} className="sm:w-3 sm:h-3" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => handleStartEdit(post)}
-                      className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black active:scale-95 shadow-2xs"
+                      onClick={() => handleCopyPost(post.content, post.id)}
+                      className="flex h-8 sm:h-9 items-center justify-center gap-1 rounded-xl border border-neutral-200 bg-white px-2.5 sm:px-3.5 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black active:scale-95 shadow-2xs"
                     >
-                      <Pencil size={12} />
-                      <span>Edit</span>
+                      {copiedId === post.id ? (
+                        <>
+                          <Check size={12} className="text-emerald-600 stroke-[3]" />
+                          <span className="font-bold text-emerald-600">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={11} className="sm:w-3 sm:h-3" />
+                          <span>Copy</span>
+                        </>
+                      )}
                     </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => handleCopyPost(post.content, post.id)}
-                    className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black active:scale-95 shadow-2xs"
-                  >
-                    {copiedId === post.id ? (
-                      <>
-                        <Check size={13} className="text-emerald-600 stroke-[3]" />
-                        <span className="font-bold text-emerald-600">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={12} />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
+                  </div>
 
                   {/* Primary Post on X Button */}
                   {isThisPostPosted ? (
-                    // POSTED STATE: Sleek Emerald Green with Green Check
+                    // POSTED STATE: Sleek Emerald Green with Green Check (Guaranteed within card bounds)
                     <button
                       type="button"
                       onClick={() => handlePostClick(post)}
-                      className="flex h-9 flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-95 shadow-2xs"
+                      className="flex h-8 sm:h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 sm:px-4 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-95 shadow-2xs whitespace-nowrap"
                       title="Post again on X"
                     >
-                      <Check size={14} className="stroke-[3]" />
+                      <Check size={13} className="stroke-[3]" />
                       <span>Posted on X</span>
-                      <ExternalLink size={11} className="opacity-80" />
+                      <ExternalLink size={10} className="opacity-80" />
                     </button>
                   ) : (
-                    // UNPOSTED STATE: Active Black OR Muted Cooldown State (Clicking shows alert window with remaining time)
+                    // UNPOSTED STATE: Active Black OR Muted Cooldown State
                     <button
                       type="button"
                       onClick={() => handlePostClick(post)}
-                      className={`flex h-9 flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl px-4 text-xs font-bold transition active:scale-95 shadow-2xs ${
+                      className={`flex h-8 sm:h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 sm:px-4 text-xs font-bold transition active:scale-95 shadow-2xs whitespace-nowrap ${
                         isLockedByCooldown
                           ? "border border-neutral-200 bg-neutral-100 text-neutral-400 hover:border-neutral-300 hover:text-neutral-600 cursor-pointer shadow-none"
                           : "bg-black text-white hover:bg-neutral-800"
@@ -485,9 +487,9 @@ export default function GeneratedPosts({
                           : "Post on X"
                       }
                     >
-                      <XLogo className="h-3 w-3 fill-current" />
+                      <XLogo className="h-2.5 w-2.5 sm:h-3 sm:w-3 fill-current" />
                       <span>Post on X</span>
-                      <ExternalLink size={11} className="opacity-70" />
+                      <ExternalLink size={10} className="opacity-70" />
                     </button>
                   )}
                 </div>
