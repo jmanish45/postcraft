@@ -48,6 +48,57 @@ def _get_gemini_client(custom_api_key: Optional[str] = None) -> genai.Client:
     )
 
 
+def _trim_to_twitter_limit(content: str, max_len: int = 279) -> str:
+    """Safeguard: guarantees drafts never exceed Twitter/X maximum character ceiling."""
+    content = content.strip()
+    if len(content) <= max_len:
+        return content
+
+    # Separate trailing campaign hashtags
+    match = re.search(r"((?:\s*#[a-zA-Z0-9_\u0900-\u097F]+)+)\s*$", content)
+    if match:
+        hashtags = match.group(1).strip()
+        body = content[: match.start()].strip()
+    else:
+        hashtags = ""
+        body = content
+
+    allowed_body_len = max_len - (len(hashtags) + 1 if hashtags else 0)
+    if len(body) > allowed_body_len:
+        # Prioritize trimming at a complete sentence boundary if length is preserved
+        best_sentence_end = -1
+        for punct in [". ", "! ", "? "]:
+            pos = body[:allowed_body_len].rfind(punct)
+            if pos > best_sentence_end and pos >= 200:
+                best_sentence_end = pos + 1
+
+        if best_sentence_end > 0:
+            body = body[:best_sentence_end].strip()
+        else:
+            trimmed_body = body[:allowed_body_len].rstrip(" ,;:-—")
+            last_space = trimmed_body.rfind(" ")
+            if last_space > 0 and len(trimmed_body) - last_space < 18:
+                trimmed_body = trimmed_body[:last_space].rstrip(" ,;:-—")
+
+            # Remove awkward trailing prepositions/conjunctions if cut at word boundary
+            trailing_fillers = {
+                "with", "and", "or", "to", "for", "the", "a", "an", "in",
+                "of", "our", "their", "is", "that", "this", "as", "by", "from",
+                "into", "on", "at", "it", "its"
+            }
+            words = trimmed_body.split()
+            while words and words[-1].lower().rstrip(".,!?;:-—") in trailing_fillers:
+                words.pop()
+            trimmed_body = " ".join(words)
+
+            if trimmed_body and not trimmed_body.endswith((".", "!", "?")):
+                trimmed_body += "."
+            body = trimmed_body
+
+    result = f"{body} {hashtags}".strip() if hashtags else body
+    return result if len(result) <= max_len else result[:max_len]
+
+
 def _parse_response(response_text: str, provider_name: str = "AI") -> GenerateResponse:
     clean_text = response_text.strip()
     # Robustly strip potential markdown fences if present
@@ -69,6 +120,12 @@ def _parse_response(response_text: str, provider_name: str = "AI") -> GenerateRe
             if alt_key in response_data and isinstance(response_data[alt_key], list):
                 response_data = {"generated_posts": response_data[alt_key]}
                 break
+
+    # Apply 279 character hard ceiling safeguard across all drafts
+    if isinstance(response_data, dict) and "generated_posts" in response_data:
+        for post in response_data["generated_posts"]:
+            if isinstance(post, dict) and "content" in post:
+                post["content"] = _trim_to_twitter_limit(post["content"], 279)
 
     return GenerateResponse.model_validate(response_data)
 
