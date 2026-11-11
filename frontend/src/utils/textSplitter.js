@@ -1,12 +1,11 @@
 /**
  * Utility for detecting and splitting multi-point campaign text.
- * Handles campaign emojis (♦️, 🔹, etc.), numbered lists (1., 2.), bullet points (- , * ),
- * and double-newline paragraphs.
+ * Strictly splits ONLY when there are multiple endlines or blank lines (2 or more newlines with optional spaces).
+ * Single endlines (\n) within the same paragraph are preserved so line-wrapped stories remain intact.
  */
 
-// Common campaign delimiters and emojis
-export const CAMPAIGN_DELIMITER_REGEX =
-  /(?:^|\r?\n\s+)(?=[♦🔹🔸🔺▪▫•▶📍📌✅⭐]|(?:\d+[\.\)\-]\s+)|(?:[\-\*]\s+))|(?:\r?\n\s*)(?=[♦🔹🔸🔺▪▫•▶📍📌✅⭐]|(?:\d+[\.\)\-]\s+)|(?:[\-\*]\s+))/u;
+// Matches 2 or more consecutive endlines (with optional whitespace or tabs on blank lines)
+export const MULTIPLE_ENDLINES_REGEX = /(?:\r?\n[ \t]*){2,}/;
 
 /**
  * Splits campaign text into an array of distinct items.
@@ -18,19 +17,11 @@ export function splitCampaignText(text) {
   const clean = text.trim();
   if (!clean) return [];
 
-  // 1. Try splitting using emoji, numbered, and bullet markers
-  let parts = clean
-    .split(CAMPAIGN_DELIMITER_REGEX)
+  // Split strictly on multiple endlines / blank lines
+  const parts = clean
+    .split(MULTIPLE_ENDLINES_REGEX)
     .map((p) => p.trim())
     .filter((p) => p.length >= 20);
-
-  // 2. Fallback: If no markers split the text into >= 2 items, try double newlines (paragraphs)
-  if (parts.length <= 1) {
-    parts = clean
-      .split(/\r?\n\s*\r?\n+/)
-      .map((p) => p.trim())
-      .filter((p) => p.length >= 20);
-  }
 
   return parts;
 }
@@ -46,4 +37,3 @@ export function getSplittablePointsCount(text) {
   const parts = splitCampaignText(text);
   return parts.length >= 2 ? parts.length : 0;
 }
-
