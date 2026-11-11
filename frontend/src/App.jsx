@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   X,
   ExternalLink,
+  Download,
+  Image as ImageIcon,
 } from "lucide-react";
 
 import Header from "./components/Header";
@@ -25,6 +27,7 @@ import {
   splitCampaignText,
   getSplittablePointsCount,
 } from "./utils/textSplitter";
+import { getProxiedImageUrl } from "./utils/imageTransformer";
 import {
   getSavedPosts,
   savePostsToStorage,
@@ -67,6 +70,20 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("postcraft_closing_tag", closingTag);
   }, [closingTag]);
+
+  // Campaign Media / Photos state
+  const [campaignUrl, setCampaignUrl] = useState(() => {
+    return localStorage.getItem("postcraft_campaign_url") || "";
+  });
+  const [campaignImages, setCampaignImages] = useState(() => {
+    try {
+      const saved = localStorage.getItem("postcraft_campaign_images");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [fetchingImages, setFetchingImages] = useState(false);
 
   const [language, setLanguage] = useState("English");
   const [outputCount, setOutputCount] = useState(5);
@@ -159,6 +176,64 @@ export default function App() {
     setTimeout(() => setNotification(""), 4500);
   };
 
+  const handleFetchImages = async () => {
+    const url = campaignUrl.trim();
+    if (!url) return;
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      setError("Please enter a valid campaign URL starting with http:// or https://");
+      return;
+    }
+
+    setFetchingImages(true);
+    setError("");
+    try {
+      let apiBase = (import.meta.env.VITE_API_URL || "").trim();
+      apiBase = apiBase.replace(/\/+$/, "");
+      if (apiBase.endsWith("/api")) {
+        apiBase = apiBase.slice(0, -4);
+      }
+      const endpoint = apiBase ? `${apiBase}/api/extract-images` : "/api/extract-images";
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not load images from this link.");
+      }
+
+      const images = data.images || [];
+      if (images.length === 0) {
+        setError("No campaign posters or photos detected on this page.");
+      } else {
+        setCampaignImages(images);
+        localStorage.setItem("postcraft_campaign_images", JSON.stringify(images));
+        localStorage.setItem("postcraft_campaign_url", url);
+        setNotification(`Loaded ${images.length} campaign posters! Each draft will be paired with one.`);
+        setTimeout(() => setNotification(""), 4500);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to load campaign images.");
+    } finally {
+      setFetchingImages(false);
+    }
+  };
+
+  const handleShufflePostImage = (postId) => {
+    if (campaignImages.length <= 1) return;
+    const updated = posts.map((p) => {
+      if (p.id !== postId) return p;
+      const currentIdx = campaignImages.indexOf(p.imageUrl);
+      const nextIdx = (currentIdx + 1) % campaignImages.length;
+      return { ...p, imageUrl: campaignImages[nextIdx] };
+    });
+    setPosts(updated);
+    savePostsToStorage(updated);
+  };
+
   const handleGenerate = async () => {
     const validSamples = samples
       .map((content) => content.trim())
@@ -232,6 +307,10 @@ export default function App() {
         createdAt: new Date().toISOString(),
         isPosted: false,
         postedAt: null,
+        imageUrl:
+          campaignImages.length > 0
+            ? campaignImages[idx % campaignImages.length]
+            : null,
       }));
 
       // Prepend new posts and save to localStorage
@@ -449,6 +528,82 @@ export default function App() {
                 </button>
               </div>
 
+              {/* CAMPAIGN MEDIA / PHOTOS (OPTIONAL) */}
+              <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                    <ImageIcon size={13} />
+                    <span>Campaign Photos / Media Link (Optional)</span>
+                  </label>
+                  {campaignImages.length > 0 && (
+                    <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-800">
+                      {campaignImages.length} photos ready
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    value={campaignUrl}
+                    onChange={(e) => setCampaignUrl(e.target.value)}
+                    placeholder="e.g. https://www.satsaheb.org/kist-11-12-english/"
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-base sm:text-sm outline-none transition focus:border-black focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleFetchImages}
+                    disabled={fetchingImages || !campaignUrl.trim()}
+                    className="shrink-0 flex items-center gap-1.5 rounded-xl bg-black px-4 py-2.5 text-xs font-bold text-white transition hover:bg-neutral-800 disabled:opacity-50 active:scale-95 shadow-2xs"
+                  >
+                    {fetchingImages ? (
+                      <>
+                        <LoaderCircle size={14} className="animate-spin" />
+                        <span className="hidden sm:inline">Fetching...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download size={14} />
+                        <span>Load Photos</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Thumbnail Strip of loaded campaign photos */}
+                {campaignImages.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-neutral-500">
+                      <span>✨ {campaignImages.length} campaign posters loaded. Each draft will automatically pair with one!</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCampaignImages([]);
+                          localStorage.removeItem("postcraft_campaign_images");
+                        }}
+                        className="text-neutral-400 hover:text-black underline"
+                      >
+                        Clear Photos
+                      </button>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
+                      {campaignImages.slice(0, 10).map((imgUrl, i) => (
+                        <img
+                          key={i}
+                          src={getProxiedImageUrl(imgUrl)}
+                          alt={`Campaign preview ${i + 1}`}
+                          className="h-14 w-14 shrink-0 rounded-lg object-cover border border-neutral-200 shadow-2xs hover:scale-105 transition"
+                        />
+                      ))}
+                      {campaignImages.length > 10 && (
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-dashed border-neutral-300 text-[10px] font-bold text-neutral-400">
+                          +{campaignImages.length - 10} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 2. CAMPAIGN HASHTAGS & OPTIONAL CLOSING LINE */}
               <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
                 <div className="flex items-center justify-between">
@@ -590,6 +745,8 @@ export default function App() {
               onDeletePost={handleDeletePost}
               onClearAll={handleClearAll}
               onSwitchToCreate={() => setActiveTab("create")}
+              campaignImages={campaignImages}
+              onShufflePostImage={handleShufflePostImage}
             />
           </div>
         )}

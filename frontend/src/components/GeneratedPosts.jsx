@@ -11,6 +11,9 @@ import {
   Plus,
   RotateCcw,
   X,
+  Download,
+  Shuffle,
+  Image as ImageIcon,
 } from "lucide-react";
 import XLogo from "./XLogo";
 import { calculateTwitterLength, TWITTER_MAX_LENGTH } from "../utils/twitterCharCount";
@@ -18,6 +21,11 @@ import {
   getRemainingCooldownMs,
   setLastPostTimeToNow,
 } from "../utils/storage";
+import {
+  getProxiedImageUrl,
+  downloadUniqueImage,
+  copyUniqueImageToClipboard,
+} from "../utils/imageTransformer";
 
 export default function GeneratedPosts({
   posts = [],
@@ -26,11 +34,15 @@ export default function GeneratedPosts({
   onDeletePost,
   onClearAll,
   onSwitchToCreate,
+  campaignImages = [],
+  onShufflePostImage,
 }) {
   const [filter, setFilter] = useState("all"); // "all" | "unposted" | "posted"
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState("");
   const [copiedId, setCopiedId] = useState(null);
+  const [downloadingPhotoId, setDownloadingPhotoId] = useState(null);
+  const [copiedPhotoId, setCopiedPhotoId] = useState(null);
   const [copyAllStatus, setCopyAllStatus] = useState(false);
 
   // 15-Minute Safety Cooldown Timer & Alert Window State
@@ -89,6 +101,32 @@ export default function GeneratedPosts({
     }
   };
 
+  const handleDownloadPhoto = async (imageUrl, index, postId) => {
+    try {
+      setDownloadingPhotoId(postId);
+      await downloadUniqueImage(imageUrl, index);
+    } catch (err) {
+      alert("Could not process unique photo: " + err.message);
+    } finally {
+      setDownloadingPhotoId(null);
+    }
+  };
+
+  const handleCopyPhoto = async (imageUrl, postId) => {
+    try {
+      const ok = await copyUniqueImageToClipboard(imageUrl);
+      if (ok) {
+        setCopiedPhotoId(postId);
+        setTimeout(() => setCopiedPhotoId(null), 2000);
+      } else {
+        await downloadUniqueImage(imageUrl, 0);
+        alert("Photo downloaded to your device (browser restricted direct clipboard paste).");
+      }
+    } catch (err) {
+      alert("Could not copy photo: " + err.message);
+    }
+  };
+
   // Intercept click when cooldown is active to display the Alert Window
   const handlePostClick = (post) => {
     if (cooldownRemaining > 0) {
@@ -98,22 +136,31 @@ export default function GeneratedPosts({
     executePostToX(post);
   };
 
-  const executePostToX = (post) => {
+  const executePostToX = async (post) => {
     // 1. Copy to clipboard as safety fallback
     try {
-      navigator.clipboard.writeText(post.content);
+      await navigator.clipboard.writeText(post.content);
     } catch {
       // ignore
     }
 
-    // 2. Mark post as posted in localStorage
+    // 2. If post has an image, also trigger unique anti-duplicate download so it's ready to attach on X
+    if (post.imageUrl) {
+      try {
+        downloadUniqueImage(post.imageUrl, 0);
+      } catch (e) {
+        console.warn("Could not auto-download image on post:", e);
+      }
+    }
+
+    // 3. Mark post as posted in localStorage
     onTogglePosted(post.id, true);
 
-    // 3. Trigger 15-minute anti-suspension cooldown
+    // 4. Trigger 15-minute anti-suspension cooldown
     setLastPostTimeToNow();
     setCooldownRemaining(15 * 60 * 1000);
 
-    // 4. Open X intent (triggers native X mobile app on iOS/Android, or web compose)
+    // 5. Open X intent (triggers native X mobile app on iOS/Android, or web compose)
     const encodedText = encodeURIComponent(post.content);
     const xIntentUrl = `https://twitter.com/intent/tweet?text=${encodedText}`;
     window.open(xIntentUrl, "_blank", "noopener,noreferrer");
@@ -394,6 +441,82 @@ export default function GeneratedPosts({
                   <span>
                     Exceeds maximum limit of 279 characters by {charCount - TWITTER_MAX_LENGTH}. Shorten before posting.
                   </span>
+                </div>
+              )}
+
+              {/* Optional Assigned Campaign Photo Preview */}
+              {post.imageUrl && (
+                <div className="mt-3 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50/80 p-2 sm:p-2.5">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                    <div className="relative h-28 sm:h-20 w-full sm:w-24 shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+                      <img
+                        src={getProxiedImageUrl(post.imageUrl)}
+                        alt="Campaign visual"
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[8px] font-bold text-white tracking-wider">
+                        ANTI-DUP
+                      </div>
+                    </div>
+
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-neutral-800">
+                          Campaign Photo Attached
+                        </span>
+                        <span className="rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 text-[9px] font-bold text-emerald-700">
+                          100% Unique pHash
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-4 text-neutral-500">
+                        Auto-edited with micro-crop, angle tilt, & unique hash to prevent bot/duplicate detection.
+                      </p>
+
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadPhoto(post.imageUrl, index, post.id)}
+                          disabled={downloadingPhotoId === post.id}
+                          className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-800 hover:border-black active:scale-95 shadow-2xs"
+                        >
+                          <Download size={11} className="text-neutral-700" />
+                          <span>
+                            {downloadingPhotoId === post.id ? "Preparing..." : "Download Photo"}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPhoto(post.imageUrl, post.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-800 hover:border-black active:scale-95 shadow-2xs"
+                        >
+                          {copiedPhotoId === post.id ? (
+                            <>
+                              <Check size={11} className="text-emerald-600 stroke-[3]" />
+                              <span className="font-bold text-emerald-600">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={11} className="text-neutral-700" />
+                              <span>Copy Photo</span>
+                            </>
+                          )}
+                        </button>
+
+                        {campaignImages.length > 1 && onShufflePostImage && (
+                          <button
+                            type="button"
+                            onClick={() => onShufflePostImage(post.id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-[11px] font-medium text-neutral-600 hover:text-black active:scale-95 shadow-2xs"
+                            title="Shuffle with next photo in campaign kit"
+                          >
+                            <Shuffle size={11} />
+                            <span>Shuffle</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
