@@ -15,7 +15,9 @@ class Sample(BaseModel):
 class GenerateRequest(BaseModel):
     hashtags: List[str] = Field(default_factory=list)
     campaign: Optional[Campaign] = None
-    samples: List[Sample] = Field(min_length=1, max_length=10)
+    opening_tag: Optional[str] = Field(default="", description="Hashtag or tag placed at the start of the post.")
+    closing_tag: Optional[str] = Field(default="", description="Optional sign-off, channel name, or footer line placed at end space-permitting.")
+    samples: List[Sample] = Field(min_length=1, max_length=15)
     output_count: int = Field(default=5, ge=1, le=10)
     language: str = "English"
     provider: str = Field(default="groq", description="AI Provider: 'groq', 'gemini', or 'auto'")

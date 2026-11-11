@@ -48,28 +48,68 @@ def _get_gemini_client(custom_api_key: Optional[str] = None) -> genai.Client:
     )
 
 
-def _trim_to_twitter_limit(content: str, max_len: int = 279) -> str:
-    """Safeguard: guarantees drafts never exceed Twitter/X maximum character ceiling."""
+def _trim_to_twitter_limit(
+    content: str,
+    max_len: int = 279,
+    min_len: int = 250,
+    opening_tag: str = "",
+    closing_tag: str = "",
+) -> str:
+    """Safeguard: guarantees drafts never exceed Twitter/X maximum character ceiling while respecting optional closing tag."""
     content = content.strip()
+    opening_tag = (opening_tag or "").strip()
+    closing_tag = (closing_tag or "").strip()
+
+    # 1. Ensure opening tag is present at start if specified
+    if opening_tag and not content.startswith(opening_tag):
+        content = f"{opening_tag}\n{content}"
+
+    # 2. Check if closing_tag is present at the end
+    has_closing = bool(closing_tag and (content.endswith(closing_tag) or content.rstrip().endswith(closing_tag)))
+
+    # 3. Space-Permitting Rule for Closing Tag:
+    # If content exceeds max_len (279) and has closing_tag, check if dropping it allows the post to fit within 250-279 chars!
+    if len(content) > max_len and has_closing:
+        without_closing = content[: content.rfind(closing_tag)].rstrip(" \n\r,;:-—")
+        if min_len <= len(without_closing) <= max_len:
+            return without_closing
+
+    # If content doesn't have closing_tag, check if there is enough space to include it cleanly
+    if closing_tag and not has_closing:
+        candidate = f"{content}\n{closing_tag}"
+        if len(candidate) <= max_len:
+            content = candidate
+            has_closing = True
+
     if len(content) <= max_len:
         return content
 
-    # Separate trailing campaign hashtags
-    match = re.search(r"((?:\s*#[a-zA-Z0-9_\u0900-\u097F]+)+)\s*$", content)
-    if match:
-        hashtags = match.group(1).strip()
-        body = content[: match.start()].strip()
+    # 4. If still exceeding 279, trim the middle body text
+    tail = f"\n{closing_tag}" if has_closing else ""
+    if not tail:
+        match = re.search(r"((?:\s*#[a-zA-Z0-9_\u0900-\u097F]+)+)\s*$", content)
+        if match:
+            tail = match.group(1)
+            body = content[: match.start()].strip()
+        else:
+            body = content
     else:
-        hashtags = ""
-        body = content
+        body = content[: content.rfind(closing_tag)].strip()
 
-    allowed_body_len = max_len - (len(hashtags) + 1 if hashtags else 0)
+    head = f"{opening_tag}\n" if (opening_tag and body.startswith(opening_tag)) else ""
+    if head:
+        body = body[len(head):].strip()
+
+    allowed_body_len = max_len - len(head) - len(tail)
+    if allowed_body_len <= 50 and tail:
+        tail = ""
+        allowed_body_len = max_len - len(head)
+
     if len(body) > allowed_body_len:
-        # Prioritize trimming at a complete sentence boundary if length is preserved
         best_sentence_end = -1
-        for punct in [". ", "! ", "? "]:
+        for punct in [". ", "! ", "? ", "। "]:
             pos = body[:allowed_body_len].rfind(punct)
-            if pos > best_sentence_end and pos >= 200:
+            if pos > best_sentence_end and pos >= 150:
                 best_sentence_end = pos + 1
 
         if best_sentence_end > 0:
@@ -80,7 +120,6 @@ def _trim_to_twitter_limit(content: str, max_len: int = 279) -> str:
             if last_space > 0 and len(trimmed_body) - last_space < 18:
                 trimmed_body = trimmed_body[:last_space].rstrip(" ,;:-—")
 
-            # Remove awkward trailing prepositions/conjunctions if cut at word boundary
             trailing_fillers = {
                 "with", "and", "or", "to", "for", "the", "a", "an", "in",
                 "of", "our", "their", "is", "that", "this", "as", "by", "from",
@@ -91,15 +130,21 @@ def _trim_to_twitter_limit(content: str, max_len: int = 279) -> str:
                 words.pop()
             trimmed_body = " ".join(words)
 
-            if trimmed_body and not trimmed_body.endswith((".", "!", "?")):
+            if trimmed_body and not trimmed_body.endswith((".", "!", "?", "।")):
                 trimmed_body += "."
             body = trimmed_body
 
-    result = f"{body} {hashtags}".strip() if hashtags else body
+    parts = [p for p in [head.strip(), body.strip(), tail.strip()] if p]
+    result = "\n".join(parts) if len(parts) > 1 else (parts[0] if parts else "")
     return result if len(result) <= max_len else result[:max_len]
 
 
-def _parse_response(response_text: str, provider_name: str = "AI") -> GenerateResponse:
+def _parse_response(
+    response_text: str,
+    provider_name: str = "AI",
+    opening_tag: str = "",
+    closing_tag: str = "",
+) -> GenerateResponse:
     clean_text = response_text.strip()
     # Robustly strip potential markdown fences if present
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", clean_text)
@@ -121,11 +166,18 @@ def _parse_response(response_text: str, provider_name: str = "AI") -> GenerateRe
                 response_data = {"generated_posts": response_data[alt_key]}
                 break
 
-    # Apply 279 character hard ceiling safeguard across all drafts
+    # Apply 279 character hard ceiling and space-permitting closing tag safeguard
     if isinstance(response_data, dict) and "generated_posts" in response_data:
         for post in response_data["generated_posts"]:
             if isinstance(post, dict) and "content" in post:
-                post["content"] = _trim_to_twitter_limit(post["content"], 279)
+                post["content"] = _trim_to_twitter_limit(
+                    post["content"],
+                    max_len=279,
+                    opening_tag=opening_tag,
+                    closing_tag=closing_tag,
+                )
+
+    return GenerateResponse.model_validate(response_data)
 
     return GenerateResponse.model_validate(response_data)
 
@@ -192,7 +244,12 @@ def _generate_with_groq(request: GenerateRequest) -> GenerateResponse:
     except (KeyError, IndexError, json.JSONDecodeError) as e:
         raise ValueError(f"Malformed response from Groq: {response.text[:150]}") from e
 
-    return _parse_response(content_text, provider_name="Groq")
+    return _parse_response(
+        content_text,
+        provider_name="Groq",
+        opening_tag=getattr(request, "opening_tag", ""),
+        closing_tag=getattr(request, "closing_tag", ""),
+    )
 
 
 def _generate_with_gemini(request: GenerateRequest) -> GenerateResponse:
@@ -222,7 +279,12 @@ def _generate_with_gemini(request: GenerateRequest) -> GenerateResponse:
     if not response.text:
         raise ValueError("Gemini returned an empty response.")
 
-    return _parse_response(response.text, provider_name="Gemini")
+    return _parse_response(
+        response.text,
+        provider_name="Gemini",
+        opening_tag=getattr(request, "opening_tag", ""),
+        closing_tag=getattr(request, "closing_tag", ""),
+    )
 
 
 def generate_drafts(request: GenerateRequest) -> GenerateResponse:

@@ -53,7 +53,21 @@ export default function App() {
 
   // Linear form inputs
   const [samples, setSamples] = useState([""]);
-  const [hashtags, setHashtags] = useState("");
+  const [openingTag, setOpeningTag] = useState(() => {
+    return localStorage.getItem("postcraft_opening_tag") || "";
+  });
+  const [closingTag, setClosingTag] = useState(() => {
+    return localStorage.getItem("postcraft_closing_tag") || "";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("postcraft_opening_tag", openingTag);
+  }, [openingTag]);
+
+  useEffect(() => {
+    localStorage.setItem("postcraft_closing_tag", closingTag);
+  }, [closingTag]);
+
   const [language, setLanguage] = useState("English");
   const [outputCount, setOutputCount] = useState(5);
 
@@ -167,14 +181,17 @@ export default function App() {
     setLoading(true);
     setError("");
 
+    const cleanOpening = openingTag.trim();
+    const cleanClosing = closingTag.trim();
+
     const payload = {
       provider: "groq",
       api_key: userApiKey,
-      hashtags: hashtags
-        .split(/[\s,]+/)
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-        .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`)),
+      opening_tag: cleanOpening,
+      closing_tag: cleanClosing,
+      hashtags: cleanOpening
+        ? cleanOpening.split(/\s+/).filter(Boolean)
+        : [],
       samples: validSamples.map((content, index) => ({
         id: index + 1,
         content,
@@ -432,21 +449,58 @@ export default function App() {
                 </button>
               </div>
 
-              {/* 2. REQUIRED HASHTAGS */}
-              <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-xs space-y-2">
-                <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                  <Hash size={13} />
-                  <span>2. Required Hashtags</span>
-                </label>
-                <input
-                  value={hashtags}
-                  onChange={(e) => setHashtags(e.target.value)}
-                  placeholder="#Topic #Campaign"
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-3 text-base sm:text-sm outline-none transition focus:border-black focus:bg-white"
-                />
-                <p className="text-[11px] text-neutral-400">
-                  Separated by spaces or commas. Every generated draft will include them.
-                </p>
+              {/* 2. CAMPAIGN HASHTAGS & OPTIONAL CLOSING LINE */}
+              <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                    <Hash size={13} />
+                    <span>2. Campaign Tags & Closing Line</span>
+                  </label>
+                  <span className="hidden text-[11px] font-medium text-neutral-400 sm:inline">
+                    Opening Tag + Draft + Optional Footer
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Field A: Opening Tag */}
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-neutral-700">
+                        Opening Hashtag(s) <span className="font-normal text-neutral-400">(placed at start)</span>
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                        Top of Tweet
+                      </span>
+                    </div>
+                    <input
+                      value={openingTag}
+                      onChange={(e) => setOpeningTag(e.target.value)}
+                      placeholder="#Shastrarth_KaShankhnadPart12"
+                      className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-base sm:text-sm outline-none transition focus:border-black focus:bg-white"
+                    />
+                  </div>
+
+                  {/* Field B: Closing Line (Optional) */}
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-neutral-700">
+                        Closing Line / Channel <span className="font-normal text-neutral-400">(Optional)</span>
+                      </span>
+                      <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                        Space Permitting
+                      </span>
+                    </div>
+                    <input
+                      value={closingTag}
+                      onChange={(e) => setClosingTag(e.target.value)}
+                      placeholder="Sant RampalJi Yt Channel"
+                      className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-base sm:text-sm outline-none transition focus:border-black focus:bg-white"
+                    />
+                    <p className="mt-1 text-[11px] text-neutral-400">
+                      Enforced only if the tweet has room within 279 characters; automatically skipped if the message needs the space.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* 3. OUTPUT LANGUAGE */}
