@@ -319,36 +319,9 @@ export default function App() {
           <div className="mx-auto max-w-2xl space-y-6 animate-in fade-in duration-200">
             {/* Hero Section */}
             <section className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 shadow-2xs">
-                  <Sparkles size={12} />
-                  AI Editorial Assistant
-                </div>
-
-                {/* Live Groq Key Status Indicator */}
-                {hasStoredKey ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("key")}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-700 hover:border-black transition shadow-2xs"
-                    title="Click to view or edit your saved Groq key"
-                  >
-                    <ShieldCheck size={12} className="text-emerald-600 stroke-[2.5]" />
-                    <span>Groq Key Active</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("key")}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-neutral-100 px-3 py-1 text-[11px] font-semibold text-neutral-800 hover:bg-neutral-200 transition shadow-2xs"
-                    title="Click to insert your free Groq key"
-                  >
-                    <KeyRound size={12} className="text-neutral-900" />
-                    <span>
-                      Key Needed · <span className="underline font-bold">Insert Groq Key</span>
-                    </span>
-                  </button>
-                )}
+              <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 shadow-2xs">
+                <Sparkles size={12} />
+                AI Editorial Assistant
               </div>
 
               <h1 className="font-heading text-3xl font-extrabold tracking-tight sm:text-4xl text-neutral-950">
@@ -361,36 +334,6 @@ export default function App() {
                 Add 1 to 10 source posts. The AI will craft original, non-duplicate
                 drafts (250–279 chars) and save them to your device so you can post them one by one.
               </p>
-
-              {/* Notice if old drafts exist from a previous session */}
-              {posts.length > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-neutral-200 bg-neutral-100/70 p-3 text-xs">
-                  <span className="text-neutral-600">
-                    You have <span className="font-bold text-neutral-900">{posts.length}</span> saved drafts from earlier.
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("posts")}
-                      className="font-bold text-black underline hover:text-neutral-700"
-                    >
-                      View Drafts
-                    </button>
-                    <span className="text-neutral-300">·</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.confirm("Clear all previous drafts for a new day?")) {
-                          handleClearAll();
-                        }
-                      }}
-                      className="font-semibold text-neutral-600 underline hover:text-black"
-                    >
-                      Clear for New Day
-                    </button>
-                  </div>
-                </div>
-              )}
             </section>
 
             {/* LINEAR FORM:
