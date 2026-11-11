@@ -46,3 +46,4 @@ export function getSplittablePointsCount(text) {
   const parts = splitCampaignText(text);
   return parts.length >= 2 ? parts.length : 0;
 }
+
