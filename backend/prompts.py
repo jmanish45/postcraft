@@ -21,8 +21,12 @@ Vary opening words, grammatical structures, and vocabulary so every draft has a 
 
 3. ADAPT TO SOURCE VOLUME (ALWAYS MAINTAINING 250-279 CHARACTERS):
 - CRITICAL: Every single draft, whether generated from 1 sample or 10 samples, MUST be between 250 and 279 characters. Drafts under 250 characters (e.g. 130-240 chars) are STRICTLY REJECTED.
-- SINGLE SAMPLE: Produce diverse editorial angles (e.g. one question-led, one principle-driven, one reflective, one direct) on the same core truth without inventing new facts. Elaborate context, spiritual depth, and reflection to reach 250-279 chars.
-- MULTIPLE SAMPLES: Cluster distinct topics and overlapping points. For each draft, do NOT write a brief 1-sentence summary. Thoroughly elaborate the citation, its philosophical depth, and a meaningful takeaway so each draft fills 250 to 279 characters.
+- MULTI-POINT / MULTI-INCIDENT SAMPLES: If source content contains multiple distinct incidents, case studies, aid stories, or bullet points (e.g. separated by ♦️, •, numbers, or line breaks):
+  * Do NOT blend them into a generic high-level overview.
+  * Base each generated draft on a DIFFERENT specific incident or story from the list.
+  * Preserve the exact names, locations, medical conditions, and financial amounts for that specific incident accurately without mixing them across drafts.
+- SINGLE UNIFIED TOPIC: Produce diverse editorial angles (e.g. one question-led, one principle-driven, one reflective, one direct) on the same core message without inventing new facts. Elaborate context, spiritual depth, and reflection to reach 250-279 chars.
+- MULTIPLE DISTINCT SAMPLES: Cluster distinct topics. For each draft, do NOT write a brief 1-sentence summary. Thoroughly elaborate the citation, its philosophical depth, and a meaningful takeaway so each draft fills 250 to 279 characters.
 
 4. MANDATORY CHARACTER LENGTH (250 TO 279 CHARS):
 - LENGTH REQUIREMENT: Every single draft MUST contain between 250 and 279 characters in total (including spaces and required hashtags). Aim for ~260-268 characters.
@@ -66,9 +70,9 @@ def build_user_prompt(request):
     hashtags_str = " ".join(hashtags) if hashtags else "None"
 
     diversity_note = (
-        "Single source provided: Craft distinct editorial approaches (e.g., question-led, principle-focused, reflective, direct) from this single truth. Do NOT use identical sentence templates or synonym swaps."
+        "Single source provided: If it contains multiple distinct incidents/case studies or bullets (e.g. marked with ♦️), dedicate each draft to a DIFFERENT specific incident (preserving exact names, locations, and financial amounts). Otherwise, craft distinct editorial angles on the core truth. Do NOT use identical sentence templates or synonym swaps."
         if is_single_sample else
-        "Multiple sources provided: Cluster distinct topics. Do NOT write 1-sentence summaries. Elaborate on the context and spiritual/practical depth so every post fills 250 to 279 characters."
+        "Multiple sources provided: Cluster distinct topics and dedicate drafts to different specific incidents/teachings. Elaborate on the context and spiritual/practical depth so every post fills 250 to 279 characters."
     )
 
     return f"""Analyze the source material and generate {request.output_count} genuinely distinct draft posts in {request.language}.

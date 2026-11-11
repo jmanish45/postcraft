@@ -22,6 +22,10 @@ import ApiKeyPage from "./components/ApiKeyPage";
 import IntroSplash from "./components/IntroSplash";
 import LanguageDropdown from "./components/LanguageDropdown";
 import {
+  splitCampaignText,
+  getSplittablePointsCount,
+} from "./utils/textSplitter";
+import {
   getSavedPosts,
   savePostsToStorage,
   clearSavedPostsFromStorage,
@@ -88,6 +92,57 @@ export default function App() {
     }
 
     setSamples((previous) => previous.filter((_, i) => i !== index));
+  };
+
+  const handleSplitSample = (index) => {
+    const targetText = samples[index];
+    const parts = splitCampaignText(targetText);
+    if (parts.length < 2) return;
+
+    // Replace the clicked sample with the distinct split points
+    const newSamples = [
+      ...samples.slice(0, index),
+      ...parts,
+      ...samples.slice(index + 1),
+    ];
+
+    // Cap at maximum of 10 samples to respect API bounds
+    const capped = newSamples.slice(0, 10);
+    setSamples(capped);
+
+    if (newSamples.length > 10) {
+      setNotification(`Split into 10 cards (maximum allowed limit).`);
+    } else {
+      setNotification(`Sample ${index + 1} split into ${parts.length} distinct cards!`);
+    }
+    setTimeout(() => setNotification(""), 4500);
+  };
+
+  const handleSplitAll = () => {
+    let anySplit = false;
+    const newSamples = [];
+
+    for (let i = 0; i < samples.length; i++) {
+      const parts = splitCampaignText(samples[i]);
+      if (parts.length >= 2) {
+        anySplit = true;
+        newSamples.push(...parts);
+      } else {
+        newSamples.push(samples[i]);
+      }
+    }
+
+    if (!anySplit) return;
+
+    const capped = newSamples.slice(0, 10);
+    setSamples(capped);
+
+    if (newSamples.length > 10) {
+      setNotification(`Split all into 10 sample cards (maximum limit reached).`);
+    } else {
+      setNotification(`Split all multi-point content into ${capped.length} cards!`);
+    }
+    setTimeout(() => setNotification(""), 4500);
   };
 
   const handleGenerate = async () => {
@@ -330,10 +385,24 @@ export default function App() {
             <div className="space-y-6">
               {/* 1. SAMPLES INPUT */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-neutral-700">
-                    1. Source Content
-                  </h2>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-neutral-700">
+                      1. Source Content
+                    </h2>
+                    {samples.length > 1 &&
+                      samples.some((s) => getSplittablePointsCount(s) >= 2) && (
+                        <button
+                          type="button"
+                          onClick={handleSplitAll}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-900 transition hover:bg-black hover:text-white hover:border-black active:scale-95 shadow-2xs"
+                          title="Split all multi-point samples into separate cards"
+                        >
+                          <Sparkles size={12} className="text-amber-500" />
+                          <span>Auto-Split All Samples</span>
+                        </button>
+                      )}
+                  </div>
                   <span className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-neutral-600 shadow-xs">
                     {samples.length} / 10
                   </span>
@@ -347,6 +416,7 @@ export default function App() {
                       value={sample}
                       onChange={(value) => updateSample(index, value)}
                       onRemove={() => removeSample(index)}
+                      onSplit={() => handleSplitSample(index)}
                     />
                   ))}
                 </div>
