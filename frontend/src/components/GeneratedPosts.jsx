@@ -11,13 +11,25 @@ import {
   Plus,
   RotateCcw,
   X,
+  Bell,
+  BellRing,
+  Volume2,
 } from "lucide-react";
 import XLogo from "./XLogo";
 import { calculateTwitterLength, TWITTER_MAX_LENGTH } from "../utils/twitterCharCount";
 import {
   getRemainingCooldownMs,
   setLastPostTimeToNow,
+  getLastPostTime,
+  areNotificationsEnabled,
+  setNotificationsEnabled,
+  COOLDOWN_DURATION_MS,
 } from "../utils/storage";
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  showPostReminderNotification,
+} from "../utils/reminderService";
 
 export default function GeneratedPosts({
   posts = [],
@@ -33,9 +45,12 @@ export default function GeneratedPosts({
   const [copiedId, setCopiedId] = useState(null);
   const [copyAllStatus, setCopyAllStatus] = useState(false);
 
-  // 15-Minute Safety Cooldown Timer & Alert Window State
+  // 20-Minute Safety Cooldown Timer & Notification State
   const [cooldownRemaining, setCooldownRemaining] = useState(() => getRemainingCooldownMs());
   const [cooldownAlertPost, setCooldownAlertPost] = useState(null);
+  const [notificationsActive, setNotificationsActive] = useState(() => areNotificationsEnabled());
+  const [permissionState, setPermissionState] = useState(() => getNotificationPermission());
+  const [testAlertSent, setTestAlertSent] = useState(false);
 
   useEffect(() => {
     const updateTimer = () => {
@@ -51,6 +66,65 @@ export default function GeneratedPosts({
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [cooldownAlertPost]);
+
+  // Listen to cooldown complete event dispatched by background reminder service
+  useEffect(() => {
+    const handleCooldownComplete = () => {
+      setCooldownRemaining(0);
+      setCooldownAlertPost(null);
+    };
+    window.addEventListener("postcraft:cooldown-complete", handleCooldownComplete);
+    return () => {
+      window.removeEventListener("postcraft:cooldown-complete", handleCooldownComplete);
+    };
+  }, []);
+
+  const handleToggleNotifications = async () => {
+    const current = getNotificationPermission();
+    if (current !== "granted") {
+      const res = await requestNotificationPermission();
+      setPermissionState(res);
+      if (res === "granted") {
+        setNotificationsEnabled(true);
+        setNotificationsActive(true);
+        await showPostReminderNotification({
+          title: "🔔 20m Reminders Active!",
+          body: "You will be alerted after 20 minutes every time you post a draft to X.",
+          isTest: true,
+        });
+      } else {
+        alert(
+          "Notifications are blocked in Chrome. Please tap the lock/settings icon in the browser address bar and enable Notifications for this site."
+        );
+      }
+    } else {
+      const nextState = !notificationsActive;
+      setNotificationsEnabled(nextState);
+      setNotificationsActive(nextState);
+    }
+  };
+
+  const handleSendTestAlert = async () => {
+    const perm = getNotificationPermission();
+    if (perm !== "granted") {
+      const res = await requestNotificationPermission();
+      setPermissionState(res);
+      if (res !== "granted") {
+        alert("Please allow notifications to receive reminders on your mobile device.");
+        return;
+      }
+      setNotificationsEnabled(true);
+      setNotificationsActive(true);
+    }
+
+    setTestAlertSent(true);
+    await showPostReminderNotification({
+      title: "⏰ Postcraft Test Alert!",
+      body: "Your phone is ready. A reminder like this will arrive 20 minutes after each post.",
+      isTest: true,
+    });
+    setTimeout(() => setTestAlertSent(false), 2500);
+  };
 
   const formatCooldown = (ms) => {
     const totalSeconds = Math.ceil(ms / 1000);
@@ -109,9 +183,9 @@ export default function GeneratedPosts({
     // 2. Mark post as posted in localStorage
     onTogglePosted(post.id, true);
 
-    // 3. Trigger 15-minute anti-suspension cooldown
+    // 3. Trigger 20-minute anti-suspension cooldown & reminder
     setLastPostTimeToNow();
-    setCooldownRemaining(15 * 60 * 1000);
+    setCooldownRemaining(COOLDOWN_DURATION_MS);
 
     // 4. Open X intent (triggers native X mobile app on iOS/Android, or web compose)
     const encodedText = encodeURIComponent(post.content);
@@ -183,7 +257,7 @@ export default function GeneratedPosts({
           </div>
 
           {/* Minimal Countdown Indicator Above Posts (No loud alerts, just clean timer) */}
-          <div className="mt-1 flex items-center gap-2 text-xs">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
             {isCooldownActive ? (
               <span className="inline-flex items-center gap-1.5 font-medium text-neutral-600">
                 <Clock size={12} className="text-neutral-900 animate-pulse" />
@@ -191,10 +265,12 @@ export default function GeneratedPosts({
                 <span className="font-mono font-bold text-neutral-950">
                   {formatCooldown(cooldownRemaining)}
                 </span>
+                <span className="text-[11px] text-neutral-400">· 20m gap</span>
               </span>
             ) : (
-              <span className="text-neutral-400 text-xs">
-                Ready to post on X
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span>Ready to post on X</span>
               </span>
             )}
           </div>
@@ -202,6 +278,47 @@ export default function GeneratedPosts({
 
         {/* Action Buttons: Sleek Monochrome Styling (No red color) */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* 20-Minute Reminder Toggle Button */}
+          <button
+            type="button"
+            onClick={handleToggleNotifications}
+            title={
+              notificationsActive
+                ? "20-minute notification reminders are ON. Click to mute."
+                : "Enable 20-minute notification reminders for your phone."
+            }
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition active:scale-95 shadow-2xs ${
+              notificationsActive
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                : "border-neutral-200 bg-white text-neutral-600 hover:border-black hover:text-black"
+            }`}
+          >
+            {notificationsActive ? (
+              <BellRing size={12} className="text-emerald-600 animate-pulse" />
+            ) : (
+              <Bell size={12} />
+            )}
+            <span className="hidden sm:inline">
+              {notificationsActive ? "20m Reminders On" : "Enable Reminders"}
+            </span>
+            <span className="sm:hidden">
+              {notificationsActive ? "20m On" : "Reminders"}
+            </span>
+          </button>
+
+          {/* Test Chime & Alert Button */}
+          <button
+            type="button"
+            onClick={handleSendTestAlert}
+            title="Test notification and audio chime on this device"
+            className="flex items-center gap-1 rounded-xl border border-neutral-200 bg-white px-2.5 py-2 text-xs font-semibold text-neutral-600 hover:border-black hover:text-black transition active:scale-95 shadow-2xs"
+          >
+            <Volume2 size={12} />
+            <span className="hidden sm:inline">
+              {testAlertSent ? "Chimed!" : "Test Alert"}
+            </span>
+          </button>
+
           {/* Start New Day / Clear Button (Clean neutral styling) */}
           <button
             type="button"
@@ -241,6 +358,32 @@ export default function GeneratedPosts({
           </button>
         </div>
       </div>
+
+      {/* 20-Minute Safety Interval Complete Banner */}
+      {!isCooldownActive && getLastPostTime() > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 to-emerald-100/50 p-3.5 text-xs text-emerald-950 shadow-2xs animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+              <Check size={14} className="stroke-[2.5]" />
+            </div>
+            <div>
+              <p className="font-bold">20-Minute Safety Gap Completed!</p>
+              <p className="text-[11px] text-emerald-700">
+                Your account is in safe standing. You can now post your next draft without spam risk.
+              </p>
+            </div>
+          </div>
+          {unpostedPosts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilter("unposted")}
+              className="rounded-xl bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-800 active:scale-95 shadow-xs"
+            >
+              Post Next ({unpostedPosts.length} left)
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -499,7 +642,7 @@ export default function GeneratedPosts({
         })}
       </div>
 
-      {/* ALERT WINDOW: 15-Minute Safety Cooldown Modal */}
+      {/* ALERT WINDOW: 20-Minute Safety Cooldown Modal */}
       {cooldownAlertPost && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
@@ -524,7 +667,7 @@ export default function GeneratedPosts({
             </div>
 
             <h3 className="font-heading text-lg font-bold text-neutral-950">
-              Account Safety Wait
+              Account Safety Wait (20-Min Gap)
             </h3>
 
             <p className="mt-2 text-xs leading-5 text-neutral-600">
@@ -532,12 +675,22 @@ export default function GeneratedPosts({
               <span className="font-mono font-bold text-black text-sm">
                 {formatCooldown(cooldownRemaining)}
               </span>{" "}
-              for your next post.
+              before posting your next tweet.
             </p>
 
             <p className="mt-2 text-[11px] leading-4 text-neutral-400">
-              Posting with less than 15 minutes gap can cause X to flag your account for duplicate content or automated spam.
+              Posting with less than 20 minutes gap can cause X to flag your account for duplicate content or automated spam.
             </p>
+
+            {/* Reminder Alert Notice */}
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-neutral-50 border border-neutral-200/80 p-2.5 text-[11px] text-neutral-600">
+              <Bell size={13} className="shrink-0 text-neutral-700" />
+              <span>
+                {notificationsActive
+                  ? "🔔 A reminder notification will chime on your mobile when 20m finishes."
+                  : "💡 Turn on '20m Reminders' above to get a mobile notification when ready."}
+              </span>
+            </div>
 
             <div className="mt-6 flex flex-col gap-2">
               <button

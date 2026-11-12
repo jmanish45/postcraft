@@ -32,6 +32,7 @@ import {
   clearLastPostTime,
   getUserApiKey,
 } from "./utils/storage";
+import { initReminderService } from "./utils/reminderService";
 
 export default function App() {
   const [showIntro, setShowIntro] = useState(() => {
@@ -85,6 +86,11 @@ export default function App() {
   useEffect(() => {
     setHasStoredKey(Boolean(getUserApiKey("groq")?.trim()));
   }, [activeTab]);
+
+  // Initialize background 20-min posting reminder watcher
+  useEffect(() => {
+    initReminderService();
+  }, []);
 
   const unpostedCount = posts.filter((p) => !p.isPosted).length;
 
