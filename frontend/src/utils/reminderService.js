@@ -217,3 +217,4 @@ export function initReminderService() {
     window.addEventListener("focus", handleWake);
   }
 }
+
