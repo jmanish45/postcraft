@@ -60,11 +60,21 @@ def _trim_to_twitter_limit(
     opening_tag = (opening_tag or "").strip()
     closing_tag = (closing_tag or "").strip()
 
-    # 1. Ensure opening tag is present at start if specified
-    if opening_tag and not content.startswith(opening_tag):
-        content = f"{opening_tag}\n{content}"
+    # 1. Ensure opening tag is present on its own line at the start
+    if opening_tag:
+        if content.startswith(opening_tag):
+            rest = content[len(opening_tag):]
+            if not rest.startswith("\n"):
+                content = f"{opening_tag}\n{rest.lstrip(' ')}"
+        else:
+            content = f"{opening_tag}\n{content}"
 
-    # 2. Check if closing_tag is present at the end
+    # 2. Ensure closing tag is separated by a newline at the end if present
+    if closing_tag and content.endswith(closing_tag):
+        prefix = content[:-len(closing_tag)]
+        if not prefix.endswith("\n"):
+            content = f"{prefix.rstrip(' ')}\n{closing_tag}"
+
     has_closing = bool(closing_tag and (content.endswith(closing_tag) or content.rstrip().endswith(closing_tag)))
 
     # 3. Space-Permitting Rule for Closing Tag:
@@ -74,9 +84,9 @@ def _trim_to_twitter_limit(
         if min_len <= len(without_closing) <= max_len:
             return without_closing
 
-    # If content doesn't have closing_tag, check if there is enough space to include it cleanly
+    # If content doesn't have closing_tag, check if there is enough space to include it cleanly on next line
     if closing_tag and not has_closing:
-        candidate = f"{content}\n{closing_tag}"
+        candidate = f"{content.rstrip()}\n{closing_tag}"
         if len(candidate) <= max_len:
             content = candidate
             has_closing = True

@@ -29,17 +29,25 @@ Vary opening words, grammatical structures, and vocabulary so every draft has a 
 - MULTIPLE DISTINCT SAMPLES: Cluster distinct topics. For each draft, do NOT write a brief 1-sentence summary. Thoroughly elaborate the citation, its philosophical depth, and a meaningful takeaway so each draft fills 250 to 279 characters.
 
 4. POST STRUCTURE & MANDATORY LENGTH (250 TO 279 CHARS):
-- STRUCTURAL ORDER:
-  * Opening Tag: If provided, placed at the VERY START of the draft (e.g. #CampaignTag).
-  * Main Editorial Content: Rich, fact-grounded body text in the middle.
-  * Optional Closing Line: If provided (e.g. channel name or sign-off line), placed at the VERY END.
+- STRUCTURAL NEWLINE RULES (CRITICAL):
+  * Line 1: Opening Hashtag(s) (e.g. #CampaignTag) on its own separate line.
+  * Line 2 (Next Line): The main editorial body content. There MUST be an explicit newline (\n) after the opening hashtag so that the content begins on the next line, NEVER on the same line with a space.
+  * Line 3 (Next Line, Optional): If closing line is provided and space permits, append it on its own new line (\n) at the very end.
 - OPTIONAL CLOSING LINE RULE:
-  * The closing line is OPTIONAL. Include it at the end ONLY if the complete post (opening + body + closing) fits cleanly within 250 to 279 characters without cutting off the message.
+  * The closing line is OPTIONAL. Include it on a new line at the end ONLY if the complete post (opening + newline + body + newline + closing) fits cleanly within 250 to 279 characters without cutting off the message.
   * If the body text needs the full character space to explain the incident/facts, OMIT the closing line entirely rather than trimming or butchering the factual sentence.
-- MINIMUM 250 / MAXIMUM 279: Every single draft MUST contain between 250 and 279 characters in total (including spaces, opening tag, and optional closing line). Aim for ~260-268 characters.
+- MINIMUM 250 / MAXIMUM 279: Every single draft MUST contain between 250 and 279 characters in total (including spaces, newlines, opening tag, and optional closing line). Aim for ~260-268 characters.
 - Drafts under 250 characters are strictly forbidden; never exceed 279 characters.
 
-5. INTERNAL DIVERSITY AUDIT:
+5. LANGUAGE SPECIFICATION (CRITICAL - STRICT SCRIPT DISCIPLINE):
+- "English": Write in fluent, natural English.
+- "Hindi": Write in Hindi using Devanagari script (e.g. संत रामपाल जी महाराज ने...).
+- "Hinglish": MUST be written in conversational Hindi using English/Latin alphabet letters only (e.g. "Sant Rampal Ji Maharaj ne Gopalganj ki mahila ko ₹1 lakh ki aarthik sahayata pradan ki...").
+  * NEVER use Devanagari Hindi characters (no क, ख, ग) when Hinglish is selected.
+  * NEVER use pure formal English sentences when Hinglish is selected.
+  * The sentence grammar and vocabulary must be Hindi, phonetically written in English script (Romanized Hindi).
+
+6. INTERNAL DIVERSITY AUDIT:
 Before finalizing output, check across all drafts:
 - Do any two drafts share the same opening pattern or grammatical template? If so, re-angle one.
 - Are different vocabulary and sentence structures used?
@@ -79,12 +87,25 @@ def build_user_prompt(request):
 
     structure_notes = []
     if opening_tag:
-        structure_notes.append(f"Start each post with opening tag: {opening_tag}")
+        structure_notes.append(
+            f"Line 1 MUST be '{opening_tag}'. Then insert an explicit NEWLINE (\\n). The post body content MUST start on Line 2 (next line), NEVER continuing on the same line with a space."
+        )
     if closing_tag:
         structure_notes.append(
-            f'Optional closing line: "{closing_tag}". Append at the very end ONLY if total post fits inside 250-279 chars; if space is tight, omit it.'
+            f'Optional Closing Line: "{closing_tag}". Append on its own separate NEWLINE (\\n) at the very end ONLY IF total post fits inside 250-279 chars; if space is tight, omit it.'
         )
     structure_str = "\n  - ".join(structure_notes) if structure_notes else "Standard post structure."
+
+    lang_lower = (request.language or "").lower()
+    if lang_lower == "hinglish":
+        language_rule = (
+            "STRICT LANGUAGE REQUIREMENT: You MUST output in HINGLISH ONLY (Hindi language written phonetically in English/Latin alphabet letters, e.g. 'Sant Rampal Ji Maharaj ji ne...'). "
+            "ABSOLUTELY ZERO Devanagari script (no हिंदी अक्षर like संत or महाराज). ABSOLUTELY ZERO pure English prose. Write natural Hindi conversational phrasing using English letters only."
+        )
+    elif lang_lower == "hindi":
+        language_rule = "LANGUAGE REQUIREMENT: Output in HINDI using Devanagari script."
+    else:
+        language_rule = f"LANGUAGE REQUIREMENT: Output in {request.language}."
 
     diversity_note = (
         "Single source provided: If it contains multiple distinct incidents/case studies or bullets (e.g. marked with ♦️), dedicate each draft to a DIFFERENT specific incident (preserving exact names, locations, and financial amounts). Otherwise, craft distinct editorial angles on the core truth. Do NOT use identical sentence templates or synonym swaps."
@@ -98,10 +119,11 @@ INPUT DATA:
 {json.dumps(user_payload, ensure_ascii=False, indent=2)}
 
 EDITORIAL & STRUCTURAL INSTRUCTIONS:
+- {language_rule}
 - {diversity_note}
 - STRUCTURE:
   - {structure_str}
-- MANDATORY LENGTH: Every single draft MUST be between 250 and 279 characters in total (including opening tag and optional closing line if included).
+- MANDATORY LENGTH: Every single draft MUST be between 250 and 279 characters in total (including opening tag, newlines, and optional closing line if included).
 - Never output short posts under 250 characters; never exceed 279 characters.
 - Base drafts strictly on source material. Return JSON only.
 """
