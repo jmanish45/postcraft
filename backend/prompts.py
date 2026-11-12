@@ -47,7 +47,11 @@ Vary opening words, grammatical structures, and vocabulary so every draft has a 
   * NEVER use pure formal English sentences when Hinglish is selected.
   * The sentence grammar and vocabulary must be Hindi, phonetically written in English script (Romanized Hindi).
 
-6. INTERNAL DIVERSITY AUDIT:
+6. TASTEFUL, CONTEXTUAL EMOJIS:
+- Include 1 to 2 relevant emojis per draft where naturally suitable to highlight key themes (e.g. 🙏 for reverence/seva, 🏥 for medical relief/cancer/kidney care, 💰 or 🤝 for financial aid/debt relief, 📖 for scriptures, 💡 for thought-provoking reflections, ✨ for inspiration).
+- STRICT RESTRAINT: Do NOT spam emojis everywhere (maximum 1-2 per post). Never use multi-emoji chains (avoid chains like 🙏✨💖🔥). Keep it elegant, purposeful, and dignified.
+
+7. INTERNAL DIVERSITY AUDIT:
 Before finalizing output, check across all drafts:
 - Do any two drafts share the same opening pattern or grammatical template? If so, re-angle one.
 - Are different vocabulary and sentence structures used?
@@ -123,6 +127,7 @@ EDITORIAL & STRUCTURAL INSTRUCTIONS:
 - {diversity_note}
 - STRUCTURE:
   - {structure_str}
+- EMOJIS: Include 1-2 tasteful, contextually relevant emojis per post where appropriate (e.g. 🙏, 🏥, 🤝, 📖, 💡). Do not clutter or overuse.
 - MANDATORY LENGTH: Every single draft MUST be between 250 and 279 characters in total (including opening tag, newlines, and optional closing line if included).
 - Never output short posts under 250 characters; never exceed 279 characters.
 - Base drafts strictly on source material. Return JSON only.
