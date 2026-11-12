@@ -51,11 +51,11 @@ def _get_gemini_client(custom_api_key: Optional[str] = None) -> genai.Client:
 def _trim_to_twitter_limit(
     content: str,
     max_len: int = 279,
-    min_len: int = 250,
+    min_len: int = 230,
     opening_tag: str = "",
     closing_tag: str = "",
 ) -> str:
-    """Safeguard: guarantees drafts never exceed Twitter/X maximum character ceiling while respecting optional closing tag."""
+    """Safeguard: guarantees drafts never exceed Twitter/X maximum character ceiling while respecting optional closing tag and preserving min 230 chars."""
     content = content.strip()
     opening_tag = (opening_tag or "").strip()
     closing_tag = (closing_tag or "").strip()
@@ -78,7 +78,7 @@ def _trim_to_twitter_limit(
     has_closing = bool(closing_tag and (content.endswith(closing_tag) or content.rstrip().endswith(closing_tag)))
 
     # 3. Space-Permitting Rule for Closing Tag:
-    # If content exceeds max_len (279) and has closing_tag, check if dropping it allows the post to fit within 250-279 chars!
+    # If content exceeds max_len (279) and has closing_tag, check if dropping it allows the post to fit within 230-279 chars!
     if len(content) > max_len and has_closing:
         without_closing = content[: content.rfind(closing_tag)].rstrip(" \n\r,;:-—")
         if min_len <= len(without_closing) <= max_len:
@@ -117,9 +117,11 @@ def _trim_to_twitter_limit(
 
     if len(body) > allowed_body_len:
         best_sentence_end = -1
+        # Only accept sentence end if it preserves at least min_len characters
+        body_min_target = max(50, min_len - len(head) - len(tail) - 5)
         for punct in [". ", "! ", "? ", "। "]:
             pos = body[:allowed_body_len].rfind(punct)
-            if pos > best_sentence_end and pos >= 150:
+            if pos > best_sentence_end and pos >= body_min_target:
                 best_sentence_end = pos + 1
 
         if best_sentence_end > 0:
@@ -133,7 +135,7 @@ def _trim_to_twitter_limit(
             trailing_fillers = {
                 "with", "and", "or", "to", "for", "the", "a", "an", "in",
                 "of", "our", "their", "is", "that", "this", "as", "by", "from",
-                "into", "on", "at", "it", "its"
+                "into", "on", "at", "it", "its", "ki", "ka", "ke", "ko", "se", "aur", "ne"
             }
             words = trimmed_body.split()
             while words and words[-1].lower().rstrip(".,!?;:-—") in trailing_fillers:

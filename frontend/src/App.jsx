@@ -332,7 +332,7 @@ export default function App() {
 
               <p className="text-xs leading-6 text-neutral-500 sm:text-sm">
                 Add 1 to 10 source posts. The AI will craft original, non-duplicate
-                drafts (250–279 chars) and save them to your device so you can post them one by one.
+                drafts (230–279 chars) and save them to your device so you can post them one by one.
               </p>
             </section>
 

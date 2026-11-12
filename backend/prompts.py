@@ -19,25 +19,27 @@ Do NOT merely swap synonyms or replicate the same sentence template across draft
 - Devotional / Appreciation: Emphasizes reverence, dedication, or appreciation expressed in the source.
 Vary opening words, grammatical structures, and vocabulary so every draft has a distinct voice.
 
-3. ADAPT TO SOURCE VOLUME (ALWAYS MAINTAINING 250-279 CHARACTERS):
-- CRITICAL: Every single draft, whether generated from 1 sample or 10 samples, MUST be between 250 and 279 characters. Drafts under 250 characters (e.g. 130-240 chars) are STRICTLY REJECTED.
+3. ADAPT TO SOURCE VOLUME & ELABORATION DISCIPLINE:
+- STRICT MINIMUM LENGTH: Every single draft MUST be AT LEAST 230 CHARACTERS long. Drafts under 230 characters (e.g. 140-220 chars) are STRICTLY FORBIDDEN AND REJECTED.
+- WORD COUNT DISCIPLINE: You MUST write around 38 to 46 words of rich, meaningful body text.
+- Do NOT write brief 1-sentence summaries. Thoroughly explain the background, moral context, humanitarian or spiritual significance, and positive impact so that every draft comfortably fills 235 to 275 characters before closing tags.
 - MULTI-POINT / MULTI-INCIDENT SAMPLES: If source content contains multiple distinct incidents, case studies, aid stories, or bullet points (e.g. separated by ♦️, •, numbers, or line breaks):
   * Do NOT blend them into a generic high-level overview.
   * Base each generated draft on a DIFFERENT specific incident or story from the list.
   * Preserve the exact names, locations, medical conditions, and financial amounts for that specific incident accurately without mixing them across drafts.
-- SINGLE UNIFIED TOPIC: Produce diverse editorial angles (e.g. one question-led, one principle-driven, one reflective, one direct) on the same core message without inventing new facts. Elaborate context, spiritual depth, and reflection to reach 250-279 chars.
-- MULTIPLE DISTINCT SAMPLES: Cluster distinct topics. For each draft, do NOT write a brief 1-sentence summary. Thoroughly elaborate the citation, its philosophical depth, and a meaningful takeaway so each draft fills 250 to 279 characters.
+- SINGLE UNIFIED TOPIC: Produce diverse editorial angles (e.g. one question-led, one principle-driven, one reflective, one direct) on the same core message without inventing new facts. Elaborate context and reflection to reach 235-275 chars.
+- MULTIPLE DISTINCT SAMPLES: Cluster distinct topics. For each draft, do NOT write a brief 1-sentence summary. Thoroughly elaborate the citation, its philosophical depth, and a meaningful takeaway so each draft fills 235 to 275 characters.
 
-4. POST STRUCTURE & MANDATORY LENGTH (250 TO 279 CHARS):
+4. POST STRUCTURE & MANDATORY LENGTH (STRICTLY 230 TO 279 CHARS):
 - STRUCTURAL NEWLINE RULES (CRITICAL):
   * Line 1: Opening Hashtag(s) (e.g. #CampaignTag) on its own separate line.
   * Line 2 (Next Line): The main editorial body content. There MUST be an explicit newline (\n) after the opening hashtag so that the content begins on the next line, NEVER on the same line with a space.
   * Line 3 (Next Line, Optional): If closing line is provided and space permits, append it on its own new line (\n) at the very end.
 - OPTIONAL CLOSING LINE RULE:
-  * The closing line is OPTIONAL. Include it on a new line at the end ONLY if the complete post (opening + newline + body + newline + closing) fits cleanly within 250 to 279 characters without cutting off the message.
+  * The closing line is OPTIONAL. Include it on a new line at the end ONLY if the complete post (opening + newline + body + newline + closing) fits cleanly within 230 to 279 characters without cutting off the message.
   * If the body text needs the full character space to explain the incident/facts, OMIT the closing line entirely rather than trimming or butchering the factual sentence.
-- MINIMUM 250 / MAXIMUM 279: Every single draft MUST contain between 250 and 279 characters in total (including spaces, newlines, opening tag, and optional closing line). Aim for ~260-268 characters.
-- Drafts under 250 characters are strictly forbidden; never exceed 279 characters.
+- MINIMUM 230 / MAXIMUM 279: Every single draft MUST contain between 230 and 279 characters in total (including spaces, newlines, opening tag, and optional closing line). Aim for ~255-270 characters.
+- Short posts under 230 characters are strictly forbidden; never exceed 279 characters.
 
 5. LANGUAGE SPECIFICATION (CRITICAL - STRICT SCRIPT DISCIPLINE):
 - "English": Write in fluent, natural English.
@@ -96,7 +98,7 @@ def build_user_prompt(request):
         )
     if closing_tag:
         structure_notes.append(
-            f'Optional Closing Line: "{closing_tag}". Append on its own separate NEWLINE (\\n) at the very end ONLY IF total post fits inside 250-279 chars; if space is tight, omit it.'
+            f'Optional Closing Line: "{closing_tag}". Append on its own separate NEWLINE (\\n) at the very end ONLY IF total post fits inside 230-279 chars; if space is tight, omit it.'
         )
     structure_str = "\n  - ".join(structure_notes) if structure_notes else "Standard post structure."
 
@@ -114,7 +116,7 @@ def build_user_prompt(request):
     diversity_note = (
         "Single source provided: If it contains multiple distinct incidents/case studies or bullets (e.g. marked with ♦️), dedicate each draft to a DIFFERENT specific incident (preserving exact names, locations, and financial amounts). Otherwise, craft distinct editorial angles on the core truth. Do NOT use identical sentence templates or synonym swaps."
         if is_single_sample else
-        "Multiple sources provided: Cluster distinct topics and dedicate drafts to different specific incidents/teachings. Elaborate on the context and spiritual/practical depth so every post fills 250 to 279 characters."
+        "Multiple sources provided: Cluster distinct topics and dedicate drafts to different specific incidents/teachings. Elaborate on the context and spiritual/practical depth so every post fills 230 to 279 characters."
     )
 
     return f"""Analyze the source material and generate {request.output_count} genuinely distinct draft posts in {request.language}.
@@ -128,7 +130,7 @@ EDITORIAL & STRUCTURAL INSTRUCTIONS:
 - STRUCTURE:
   - {structure_str}
 - EMOJIS: Include 1-2 tasteful, contextually relevant emojis per post where appropriate (e.g. 🙏, 🏥, 🤝, 📖, 💡). Do not clutter or overuse.
-- MANDATORY LENGTH: Every single draft MUST be between 250 and 279 characters in total (including opening tag, newlines, and optional closing line if included).
-- Never output short posts under 250 characters; never exceed 279 characters.
+- MANDATORY LENGTH: Every single draft MUST be between 230 and 279 characters in total (target 255-272 chars, minimum 230 chars, maximum 279 chars).
+- STRICT MINIMUM 230: Drafts under 230 characters are strictly forbidden; never exceed 279 characters.
 - Base drafts strictly on source material. Return JSON only.
 """

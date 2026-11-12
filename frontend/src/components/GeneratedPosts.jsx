@@ -399,13 +399,13 @@ export default function GeneratedPosts({
 
               {/* Card Footer */}
               <div className="mt-4 flex flex-col gap-2.5 border-t border-neutral-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                {/* Character Counter with 250-279 indicator */}
+                {/* Character Counter with 230-279 indicator */}
                 <div className="flex items-center gap-1.5 text-xs">
                   <span
                     className={`font-semibold tabular-nums ${
                       isOverLimit
                         ? "font-bold text-neutral-900 underline"
-                        : charCount >= 250
+                        : charCount >= 230
                         ? "font-bold text-emerald-700"
                         : "text-neutral-500"
                     }`}
@@ -413,14 +413,14 @@ export default function GeneratedPosts({
                     {charCount}
                   </span>
                   <span className="text-neutral-400">/ 279 chars</span>
-                  {charCount >= 250 && charCount <= 279 && (
+                  {charCount >= 230 && charCount <= 279 && (
                     <span className="ml-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                      Optimal (250–279)
+                      Optimal (230–279)
                     </span>
                   )}
-                  {charCount < 250 && (
+                  {charCount < 230 && (
                     <span className="text-[10px] text-neutral-400">
-                      (target 250–279)
+                      (target 230–279)
                     </span>
                   )}
                 </div>
