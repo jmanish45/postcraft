@@ -1,7 +1,12 @@
-// Postcraft 20-Minute Reminder & Notification Service
+// Postcraft 15-Minute Reminder & Notification Service
+// Fires ONLY when initiated by an actual user post to X.
+// Triggers the phone's native notification ringtone stream (not media volume).
+
 import {
   getLastPostTime,
   getRemainingCooldownMs,
+  isReminderArmed,
+  disarmReminder,
   isReminderNotified,
   setReminderNotified,
   areNotificationsEnabled,
@@ -9,53 +14,9 @@ import {
 } from "./storage";
 
 /**
- * Web Audio API Pleasant 2-Tone Chime: D5 (587.33 Hz) -> A5 (880 Hz)
- * Requires no external audio assets; synthesized purely in the browser.
+ * Trigger physical phone vibration pattern if supported
  */
-export function playChime() {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-
-    if (ctx.state === "suspended") {
-      ctx.resume();
-    }
-
-    const now = ctx.currentTime;
-
-    // Tone 1: Gentle chime (D5)
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = "sine";
-    osc1.frequency.setValueAtTime(587.33, now);
-    gain1.gain.setValueAtTime(0.2, now);
-    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.start(now);
-    osc1.stop(now + 0.5);
-
-    // Tone 2: Harmonic resolution (A5)
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.type = "sine";
-    osc2.frequency.setValueAtTime(880, now + 0.18);
-    gain2.gain.setValueAtTime(0.25, now + 0.18);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.start(now + 0.18);
-    osc2.stop(now + 0.85);
-  } catch (err) {
-    console.warn("Could not synthesize chime:", err);
-  }
-}
-
-/**
- * Trigger mobile vibration pattern if supported
- */
-export function triggerVibration(pattern = [200, 100, 200, 100, 200]) {
+export function triggerVibration(pattern = [500, 200, 500, 200, 500]) {
   try {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate(pattern);
@@ -95,22 +56,30 @@ export async function requestNotificationPermission() {
 }
 
 /**
- * Deliver system notification (via Service Worker if available, fallback to Notification API)
+ * Delivers native system notification via Service Worker.
+ * On mobile devices (Android Chrome), this rings the phone's configured
+ * NOTIFICATION RINGTONE (Notification sound stream), exactly like WhatsApp/SMS,
+ * avoiding phone media audio playback.
  */
 export async function showPostReminderNotification({
   title = "⏰ Time for your next X post!",
-  body = "Your 20-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
+  body = "Your 15-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
   isTest = false,
 } = {}) {
-  // Always trigger sound & vibration
-  playChime();
-  triggerVibration([200, 100, 200, 100, 200]);
+  // 1. Trigger physical vibration buzz
+  triggerVibration([500, 200, 500, 200, 500]);
 
-  if (!isNotificationSupported()) return false;
-  if (Notification.permission !== "granted") return false;
+  if (!isNotificationSupported() || Notification.permission !== "granted") {
+    return false;
+  }
+
+  // Unique tag ensures Android treats each alert as a fresh event, ringing the notification tone
+  const uniqueTag = isTest
+    ? `postcraft-test-${Date.now()}`
+    : `postcraft-reminder-${Date.now()}`;
 
   try {
-    // Preferred on Android Chrome / PWA: Service Worker registration
+    // Service Worker notification: creates a high-priority system notification in the notification shade
     if ("serviceWorker" in navigator) {
       const reg = await navigator.serviceWorker.ready;
       if (reg && reg.showNotification) {
@@ -118,8 +87,9 @@ export async function showPostReminderNotification({
           body,
           icon: "/favicon.png",
           badge: "/favicon-32x32.png",
-          vibrate: [200, 100, 200, 100, 200],
-          tag: isTest ? `postcraft-test-${Date.now()}` : "postcraft-20m-reminder",
+          vibrate: [500, 200, 500, 200, 500],
+          silent: false, // Forces native phone notification ringtone
+          tag: uniqueTag,
           renotify: true,
           requireInteraction: true,
           data: { url: "/" },
@@ -128,11 +98,13 @@ export async function showPostReminderNotification({
       }
     }
 
-    // Fallback for desktop window context
+    // Window context fallback (desktop)
     new Notification(title, {
       body,
       icon: "/favicon.png",
       badge: "/favicon-32x32.png",
+      silent: false,
+      tag: uniqueTag,
     });
     return true;
   } catch (err) {
@@ -142,36 +114,68 @@ export async function showPostReminderNotification({
 }
 
 /**
- * Checks whether a reminder is due, and if so, triggers notification + sound
+ * STRICT REMINDER DISCIPLINE:
+ * Checks whether a reminder is due, and ONLY rings if:
+ * 1. The reminder was actively armed by a user posting a draft from that exact point.
+ * 2. 15 minutes have elapsed since that post.
+ * 3. It has not already notified.
+ * 4. The post is not ancient/stale (within 3 min of expiration).
  */
 export async function checkAndTriggerReminder() {
-  const lastTime = getLastPostTime();
-  if (!lastTime) return false;
-
-  const remaining = getRemainingCooldownMs();
-  const alreadyNotified = isReminderNotified();
-
-  if (remaining <= 0 && !alreadyNotified) {
-    setReminderNotified(true);
-    if (areNotificationsEnabled()) {
-      await showPostReminderNotification();
-    } else {
-      // Still play chime & vibrate in-app even if system notifications are muted
-      playChime();
-      triggerVibration([200, 100, 200]);
-    }
-
-    // Broadcast event for UI updates
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("postcraft:cooldown-complete", {
-          detail: { lastPostTime: lastTime },
-        })
-      );
-    }
-    return true;
+  // If not armed by a user post, NEVER ring
+  if (!isReminderArmed()) {
+    return false;
   }
-  return false;
+
+  const lastTime = getLastPostTime();
+  if (!lastTime) {
+    disarmReminder();
+    return false;
+  }
+
+  const now = Date.now();
+  const elapsed = now - lastTime;
+  const remaining = COOLDOWN_DURATION_MS - elapsed;
+
+  // Still within the 15-minute wait
+  if (remaining > 0) {
+    return false;
+  }
+
+  // If the user closed the app and came back hours later,
+  // do NOT blast a stale alarm unexpectedly! Disarm cleanly.
+  const maxLeniencyWindowMs = 3 * 60 * 1000; // 3 minutes grace
+  const isStale = elapsed - COOLDOWN_DURATION_MS > maxLeniencyWindowMs;
+
+  // Immediately disarm so it NEVER rings twice for this post
+  disarmReminder();
+  setReminderNotified(true);
+
+  // Broadcast event for UI state refresh
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("postcraft:cooldown-complete", {
+        detail: { lastPostTime: lastTime, isStale },
+      })
+    );
+  }
+
+  // If expired hours ago, do not ring
+  if (isStale) {
+    return false;
+  }
+
+  // Ring the notification ringtone at the 15-minute mark!
+  if (areNotificationsEnabled()) {
+    await showPostReminderNotification({
+      title: "⏰ Time for your next X post!",
+      body: "Your 15-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
+    });
+  } else {
+    triggerVibration([500, 200, 500, 200, 500]);
+  }
+
+  return true;
 }
 
 // Global singleton background watcher
@@ -183,7 +187,7 @@ export function initReminderService() {
   if (isInitialized || typeof window === "undefined") return;
   isInitialized = true;
 
-  // 1. Try launching dedicated Web Worker for background ticking
+  // 1. Web Worker for background ticking
   try {
     if (window.Worker) {
       workerInstance = new Worker("/timerWorker.js");
@@ -202,7 +206,6 @@ export function initReminderService() {
   }, 1000);
 
   // 3. Screen unlock / tab visibility wake-up listener
-  // When mobile phone unlocks or Chrome tab becomes visible, immediately check
   if (typeof document !== "undefined") {
     const handleWake = () => {
       checkAndTriggerReminder();
@@ -217,4 +220,3 @@ export function initReminderService() {
     window.addEventListener("focus", handleWake);
   }
 }
-

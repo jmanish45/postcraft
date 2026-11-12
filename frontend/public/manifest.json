@@ -1,7 +1,7 @@
 {
   "name": "Postcraft — AI Editorial Assistant",
   "short_name": "Postcraft",
-  "description": "AI Editorial Assistant for X (Twitter) campaigns. Create distinct drafts with 20-min posting reminders.",
+  "description": "AI Editorial Assistant for X (Twitter) campaigns. Create distinct drafts with 15-min posting reminders.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

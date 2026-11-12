@@ -1,9 +1,10 @@
 const STORAGE_KEY = "postcraft_saved_posts_v2";
 const COOLDOWN_KEY = "postcraft_last_post_time";
-const REMINDER_NOTIFIED_KEY = "postcraft_reminder_notified_v2";
+const REMINDER_ARMED_KEY = "postcraft_reminder_armed_v3";
+const REMINDER_NOTIFIED_KEY = "postcraft_reminder_notified_v3";
 const NOTIFICATIONS_ENABLED_KEY = "postcraft_notifications_enabled";
 
-export const COOLDOWN_DURATION_MS = 20 * 60 * 1000; // 20 minutes in milliseconds
+export const COOLDOWN_DURATION_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 export function getSavedPosts() {
   try {
@@ -31,7 +32,7 @@ export function clearSavedPostsFromStorage() {
   }
 }
 
-// 20-Minute Safety Cooldown & Posting Reminder Storage
+// 15-Minute Safety Cooldown & Strict Post-Initiated Reminder Storage
 export function getLastPostTime() {
   try {
     const val = localStorage.getItem(COOLDOWN_KEY);
@@ -41,11 +42,15 @@ export function getLastPostTime() {
   }
 }
 
-export function setLastPostTimeToNow() {
+/**
+ * Arms the 15-minute reminder ONLY when user actively initiates a post to X.
+ * Will count down 15 minutes from this exact moment.
+ */
+export function armReminderForPost() {
   try {
     const now = Date.now();
     localStorage.setItem(COOLDOWN_KEY, now.toString());
-    // Reset reminder notified flag for the new 20-min cycle
+    localStorage.setItem(REMINDER_ARMED_KEY, "true");
     localStorage.removeItem(REMINDER_NOTIFIED_KEY);
     return now;
   } catch {
@@ -53,9 +58,30 @@ export function setLastPostTimeToNow() {
   }
 }
 
+export function setLastPostTimeToNow() {
+  return armReminderForPost();
+}
+
+export function isReminderArmed() {
+  try {
+    return localStorage.getItem(REMINDER_ARMED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function disarmReminder() {
+  try {
+    localStorage.removeItem(REMINDER_ARMED_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function clearLastPostTime() {
   try {
     localStorage.removeItem(COOLDOWN_KEY);
+    localStorage.removeItem(REMINDER_ARMED_KEY);
     localStorage.removeItem(REMINDER_NOTIFIED_KEY);
   } catch {
     // ignore

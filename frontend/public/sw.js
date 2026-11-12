@@ -1,4 +1,4 @@
-// Postcraft Service Worker for PWA and 20-Minute Posting Reminders
+// Postcraft Service Worker for PWA and 15-Minute Posting Reminders
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -8,20 +8,22 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Display notification requested by client app
+// Display native system notification requested by client app
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SHOW_NOTIFICATION") {
     const { title, options } = event.data;
+    const notificationTag = options?.tag || `postcraft-reminder-${Date.now()}`;
     self.registration.showNotification(
       title || "⏰ Time for your next X post!",
       {
         body:
           options?.body ||
-          "Your 20-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
+          "Your 15-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
         icon: options?.icon || "/favicon.png",
         badge: options?.badge || "/favicon-32x32.png",
-        vibrate: [200, 100, 200, 100, 200],
-        tag: "postcraft-20m-reminder",
+        vibrate: [500, 200, 500, 200, 500],
+        silent: false, // Ensures Android system notification ringtone rings
+        tag: notificationTag,
         renotify: true,
         requireInteraction: true,
         data: { url: options?.url || "/" },
@@ -35,7 +37,7 @@ self.addEventListener("message", (event) => {
 self.addEventListener("push", (event) => {
   let data = {
     title: "⏰ Time for your next X post!",
-    body: "Your 20-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
+    body: "Your 15-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
     url: "/",
   };
 
@@ -53,8 +55,9 @@ self.addEventListener("push", (event) => {
       body: data.body,
       icon: "/favicon.png",
       badge: "/favicon-32x32.png",
-      vibrate: [200, 100, 200, 100, 200],
-      tag: "postcraft-20m-reminder",
+      vibrate: [500, 200, 500, 200, 500],
+      silent: false, // Rings native notification ringtone
+      tag: `postcraft-push-${Date.now()}`,
       renotify: true,
       requireInteraction: true,
       data: { url: data.url || "/" },
@@ -62,7 +65,7 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Handle notification tap / click
+// Handle notification tap / click: focus or open Postcraft
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || "/";
@@ -80,4 +83,3 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
-

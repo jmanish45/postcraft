@@ -45,7 +45,7 @@ export default function GeneratedPosts({
   const [copiedId, setCopiedId] = useState(null);
   const [copyAllStatus, setCopyAllStatus] = useState(false);
 
-  // 20-Minute Safety Cooldown Timer & Notification State
+  // 15-Minute Safety Cooldown Timer & Notification State
   const [cooldownRemaining, setCooldownRemaining] = useState(() => getRemainingCooldownMs());
   const [cooldownAlertPost, setCooldownAlertPost] = useState(null);
   const [notificationsActive, setNotificationsActive] = useState(() => areNotificationsEnabled());
@@ -88,8 +88,8 @@ export default function GeneratedPosts({
         setNotificationsEnabled(true);
         setNotificationsActive(true);
         await showPostReminderNotification({
-          title: "🔔 20m Reminders Active!",
-          body: "You will be alerted after 20 minutes every time you post a draft to X.",
+          title: "🔔 15m Reminders Active!",
+          body: "Your phone will ring with a notification 15 minutes after you post each draft.",
           isTest: true,
         });
       } else {
@@ -119,8 +119,8 @@ export default function GeneratedPosts({
 
     setTestAlertSent(true);
     await showPostReminderNotification({
-      title: "⏰ Postcraft Test Alert!",
-      body: "Your phone is ready. A reminder like this will arrive 20 minutes after each post.",
+      title: "⏰ Postcraft 15m Reminder Ready!",
+      body: "Your phone is ready. A reminder like this will ring 15 minutes after each post.",
       isTest: true,
     });
     setTimeout(() => setTestAlertSent(false), 2500);
@@ -265,7 +265,7 @@ export default function GeneratedPosts({
                 <span className="font-mono font-bold text-neutral-950">
                   {formatCooldown(cooldownRemaining)}
                 </span>
-                <span className="text-[11px] text-neutral-400">· 20m gap</span>
+                <span className="text-[11px] text-neutral-400">· 15m gap</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
@@ -278,14 +278,14 @@ export default function GeneratedPosts({
 
         {/* Action Buttons: Sleek Monochrome Styling (No red color) */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* 20-Minute Reminder Toggle Button */}
+          {/* 15-Minute Reminder Toggle Button */}
           <button
             type="button"
             onClick={handleToggleNotifications}
             title={
               notificationsActive
-                ? "20-minute notification reminders are ON. Click to mute."
-                : "Enable 20-minute notification reminders for your phone."
+                ? "15-minute notification reminders are ON. Click to mute."
+                : "Enable 15-minute notification reminders for your phone."
             }
             className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition active:scale-95 shadow-2xs ${
               notificationsActive
@@ -299,23 +299,23 @@ export default function GeneratedPosts({
               <Bell size={12} />
             )}
             <span className="hidden sm:inline">
-              {notificationsActive ? "20m Reminders On" : "Enable Reminders"}
+              {notificationsActive ? "15m Reminders On" : "Enable Reminders"}
             </span>
             <span className="sm:hidden">
-              {notificationsActive ? "20m On" : "Reminders"}
+              {notificationsActive ? "15m On" : "Reminders"}
             </span>
           </button>
 
-          {/* Test Chime & Alert Button */}
+          {/* Test Ringtone Alert Button */}
           <button
             type="button"
             onClick={handleSendTestAlert}
-            title="Test notification and audio chime on this device"
+            title="Test notification ringtone on this device"
             className="flex items-center gap-1 rounded-xl border border-neutral-200 bg-white px-2.5 py-2 text-xs font-semibold text-neutral-600 hover:border-black hover:text-black transition active:scale-95 shadow-2xs"
           >
             <Volume2 size={12} />
             <span className="hidden sm:inline">
-              {testAlertSent ? "Chimed!" : "Test Alert"}
+              {testAlertSent ? "Ringing..." : "Test Alert"}
             </span>
           </button>
 
@@ -359,7 +359,7 @@ export default function GeneratedPosts({
         </div>
       </div>
 
-      {/* 20-Minute Safety Interval Complete Banner */}
+      {/* 15-Minute Safety Interval Complete Banner */}
       {!isCooldownActive && getLastPostTime() > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 to-emerald-100/50 p-3.5 text-xs text-emerald-950 shadow-2xs animate-in fade-in duration-200">
           <div className="flex items-center gap-2.5">
@@ -367,7 +367,7 @@ export default function GeneratedPosts({
               <Check size={14} className="stroke-[2.5]" />
             </div>
             <div>
-              <p className="font-bold">20-Minute Safety Gap Completed!</p>
+              <p className="font-bold">15-Minute Safety Gap Completed!</p>
               <p className="text-[11px] text-emerald-700">
                 Your account is in safe standing. You can now post your next draft without spam risk.
               </p>
@@ -667,7 +667,7 @@ export default function GeneratedPosts({
             </div>
 
             <h3 className="font-heading text-lg font-bold text-neutral-950">
-              Account Safety Wait (20-Min Gap)
+              Account Safety Wait (15-Min Gap)
             </h3>
 
             <p className="mt-2 text-xs leading-5 text-neutral-600">
@@ -679,7 +679,7 @@ export default function GeneratedPosts({
             </p>
 
             <p className="mt-2 text-[11px] leading-4 text-neutral-400">
-              Posting with less than 20 minutes gap can cause X to flag your account for duplicate content or automated spam.
+              Posting with less than 15 minutes gap can cause X to flag your account for duplicate content or automated spam.
             </p>
 
             {/* Reminder Alert Notice */}
@@ -687,8 +687,8 @@ export default function GeneratedPosts({
               <Bell size={13} className="shrink-0 text-neutral-700" />
               <span>
                 {notificationsActive
-                  ? "🔔 A reminder notification will chime on your mobile when 20m finishes."
-                  : "💡 Turn on '20m Reminders' above to get a mobile notification when ready."}
+                  ? "🔔 A reminder notification will ring on your phone when 15m finishes."
+                  : "💡 Turn on '15m Reminders' above to get a mobile notification when ready."}
               </span>
             </div>
 
