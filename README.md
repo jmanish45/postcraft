@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="frontend/public/logo-banner.png" alt="Postcraft — Ideas to Impactful Posts" width="540" style="border-radius: 14px;" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/logo-dark.png">
+    <img alt="Postcraft — Ideas to Impactful Posts" src="frontend/public/logo-light.png" width="500" />
+  </picture>
 </p>
 
 <h1 align="center">Postcraft</h1>
@@ -145,7 +148,9 @@ postcraft/
 │   │   ├── manifest.json    # Standalone PWA web manifest
 │   │   ├── sw.js            # PWA Service Worker for native background notifications
 │   │   ├── timerWorker.js   # Background worker preventing tab throttle
-│   │   ├── logo-banner.jpg  # Main branded banner logo
+│   │   ├── logo-light.png   # Light-mode adaptive logo (crisp black text)
+│   │   ├── logo-dark.png    # Dark-mode adaptive logo (crisp white text)
+│   │   ├── logo-banner.png  # Solid dark card hero banner
 │   │   ├── logo.png         # Emblem mark logo
 │   │   └── favicon.png      # Application icons
 │   ├── src/
