@@ -43,14 +43,14 @@ Vary opening words, grammatical structures, and vocabulary so every draft has a 
 
 5. LANGUAGE SPECIFICATION (CRITICAL - STRICT SCRIPT DISCIPLINE):
 - "English": Write in fluent, natural English.
-- "Hindi": Write in Hindi using Devanagari script (e.g. संत रामपाल जी महाराज ने...).
-- "Hinglish": MUST be written in conversational Hindi using English/Latin alphabet letters only (e.g. "Sant Rampal Ji Maharaj ne Gopalganj ki mahila ko ₹1 lakh ki aarthik sahayata pradan ki...").
+- "Hindi": Write in Hindi using Devanagari script (e.g. समाज कल्याण और जरूरतमंदों की सेवा के लिए...).
+- "Hinglish": MUST be written in conversational Hindi using English/Latin alphabet letters only (e.g. "Is abhiyan ke madhyam se har vyakti tak zaroori jaankari aur madad pahuchai ja rahi hai...").
   * NEVER use Devanagari Hindi characters (no क, ख, ग) when Hinglish is selected.
   * NEVER use pure formal English sentences when Hinglish is selected.
   * The sentence grammar and vocabulary must be Hindi, phonetically written in English script (Romanized Hindi).
 
 6. TASTEFUL, CONTEXTUAL EMOJIS:
-- Include 1 to 2 relevant emojis per draft where naturally suitable to highlight key themes (e.g. 🙏 for reverence/seva, 🏥 for medical relief/cancer/kidney care, 💰 or 🤝 for financial aid/debt relief, 📖 for scriptures, 💡 for thought-provoking reflections, ✨ for inspiration).
+- Include 1 to 2 relevant emojis per draft where naturally suitable to highlight key themes (e.g. 🙏 for reverence/support, 🏥 for medical relief/healthcare, 💰 or 🤝 for financial aid/solidarity, 📖 for learning/facts, 💡 for thought-provoking reflections, ✨ for inspiration).
 - STRICT RESTRAINT: Do NOT spam emojis everywhere (maximum 1-2 per post). Never use multi-emoji chains (avoid chains like 🙏✨💖🔥). Keep it elegant, purposeful, and dignified.
 
 7. INTERNAL DIVERSITY AUDIT:
@@ -105,8 +105,8 @@ def build_user_prompt(request):
     lang_lower = (request.language or "").lower()
     if lang_lower == "hinglish":
         language_rule = (
-            "STRICT LANGUAGE REQUIREMENT: You MUST output in HINGLISH ONLY (Hindi language written phonetically in English/Latin alphabet letters, e.g. 'Sant Rampal Ji Maharaj ji ne...'). "
-            "ABSOLUTELY ZERO Devanagari script (no हिंदी अक्षर like संत or महाराज). ABSOLUTELY ZERO pure English prose. Write natural Hindi conversational phrasing using English letters only."
+            "STRICT LANGUAGE REQUIREMENT: You MUST output in HINGLISH ONLY (Hindi language written phonetically in English/Latin alphabet letters, e.g. 'Hum sabhi ko is muhim se judkar aage aana chahiye...'). "
+            "ABSOLUTELY ZERO Devanagari script (no हिंदी अक्षर). ABSOLUTELY ZERO pure English prose. Write natural Hindi conversational phrasing using English letters only."
         )
     elif lang_lower == "hindi":
         language_rule = "LANGUAGE REQUIREMENT: Output in HINDI using Devanagari script."

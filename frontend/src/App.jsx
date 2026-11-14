@@ -424,7 +424,7 @@ export default function App() {
                     <input
                       value={openingTag}
                       onChange={(e) => setOpeningTag(e.target.value)}
-                      placeholder="#Shastrarth_KaShankhnadPart12"
+                      placeholder="#CampaignTag or #TopicHashtag"
                       className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-base sm:text-sm outline-none transition focus:border-black focus:bg-white"
                     />
                   </div>
@@ -442,7 +442,7 @@ export default function App() {
                     <input
                       value={closingTag}
                       onChange={(e) => setClosingTag(e.target.value)}
-                      placeholder="Sant RampalJi Yt Channel"
+                      placeholder="e.g. @YourHandle, Website Link, or Channel"
                       className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-base sm:text-sm outline-none transition focus:border-black focus:bg-white"
                     />
                     <p className="mt-1 text-[11px] text-neutral-400">
