@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/logo-banner.jpg" alt="Postcraft — Ideas to Impactful Posts" width="540" style="border-radius: 14px;" />
+  <img src="frontend/public/logo-banner.png" alt="Postcraft — Ideas to Impactful Posts" width="540" style="border-radius: 14px;" />
 </p>
 
 <h1 align="center">Postcraft</h1>
