@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/logo.png" alt="Postcraft Logo" width="260" />
+  <img src="frontend/public/logo-banner.jpg" alt="Postcraft — Ideas to Impactful Posts" width="540" style="border-radius: 14px;" />
 </p>
 
 <h1 align="center">Postcraft</h1>
@@ -145,7 +145,8 @@ postcraft/
 │   │   ├── manifest.json    # Standalone PWA web manifest
 │   │   ├── sw.js            # PWA Service Worker for native background notifications
 │   │   ├── timerWorker.js   # Background worker preventing tab throttle
-│   │   ├── logo.png         # Main application logo
+│   │   ├── logo-banner.jpg  # Main branded banner logo
+│   │   ├── logo.png         # Emblem mark logo
 │   │   └── favicon.png      # Application icons
 │   ├── src/
 │   │   ├── components/
