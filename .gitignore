@@ -4,6 +4,8 @@
 backend/.env
 !.env.example
 !backend/.env.example
+.vapid_keys.json
+backend/.vapid_keys.json
 
 # Python
 venv/

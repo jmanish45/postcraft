@@ -32,3 +32,31 @@ class GeneratedPost(BaseModel):
 
 class GenerateResponse(BaseModel):
     generated_posts: List[GeneratedPost] = Field(default_factory=list, description="List of distinct generated post drafts.")
+
+
+class PushKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscriptionModel(BaseModel):
+    endpoint: str
+    keys: PushKeys
+
+
+class ScheduleReminderRequest(BaseModel):
+    subscription: PushSubscriptionModel
+    delay_seconds: int = Field(default=900, ge=1, le=86400)
+    title: str = "⏰ Time for your next X post!"
+    body: str = "Your 15-minute safety interval has passed. Tap to open Postcraft and post your next draft."
+    reminder_id: Optional[str] = "default"
+
+
+class CancelReminderRequest(BaseModel):
+    reminder_id: str = "default"
+
+
+class TestPushRequest(BaseModel):
+    subscription: PushSubscriptionModel
+    title: str = "⏰ Postcraft Test Alert!"
+    body: str = "Server push delivered! Your phone can ring even when the app is closed."

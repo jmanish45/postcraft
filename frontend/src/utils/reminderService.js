@@ -1,6 +1,6 @@
 // Postcraft 15-Minute Reminder & Notification Service
-// Fires ONLY when initiated by an actual user post to X.
-// Triggers the phone's native notification ringtone stream (not media volume).
+// Combines Client-Side Service Worker + Server-Side Web Push (FCM).
+// Wakes up mobile devices even when the PWA is closed or screen is off!
 
 import {
   getLastPostTime,
@@ -12,6 +12,21 @@ import {
   areNotificationsEnabled,
   COOLDOWN_DURATION_MS,
 } from "./storage";
+
+function getApiBaseUrl() {
+  return (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 /**
  * Trigger physical phone vibration pattern if supported
@@ -27,10 +42,18 @@ export function triggerVibration(pattern = [500, 200, 500, 200, 500]) {
 }
 
 /**
- * Check if the Notifications API is supported
+ * Check if Notifications API and Push API are supported
  */
 export function isNotificationSupported() {
   return typeof window !== "undefined" && "Notification" in window;
+}
+
+export function isPushSupported() {
+  return (
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window
+  );
 }
 
 /**
@@ -42,12 +65,18 @@ export function getNotificationPermission() {
 }
 
 /**
- * Request notification permission from user
+ * Request notification permission from user and automatically subscribe to Web Push
  */
 export async function requestNotificationPermission() {
   if (!isNotificationSupported()) return "unsupported";
   try {
     const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      // Pre-warm push subscription so server can wake up sleeping phone
+      getOrRegisterPushSubscription().catch((e) =>
+        console.warn("Background push pre-warm error:", e)
+      );
+    }
     return permission;
   } catch (err) {
     console.error("Error requesting notification permission:", err);
@@ -56,30 +85,152 @@ export async function requestNotificationPermission() {
 }
 
 /**
- * Delivers native system notification via Service Worker.
- * On mobile devices (Android Chrome), this rings the phone's configured
- * NOTIFICATION RINGTONE (Notification sound stream), exactly like WhatsApp/SMS,
- * avoiding phone media audio playback.
+ * Gets or registers the browser's Web Push subscription with Google FCM
+ */
+export async function getOrRegisterPushSubscription() {
+  if (!isPushSupported()) return null;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      return sub.toJSON();
+    }
+
+    // Fetch VAPID public key from backend
+    const apiBase = getApiBaseUrl();
+    const res = await fetch(`${apiBase}/api/notifications/vapid-public-key`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch VAPID key: ${res.status}`);
+    }
+    const data = await res.json();
+    const publicKey = data.public_key;
+
+    if (!publicKey) return null;
+
+    const convertedKey = urlBase64ToUint8Array(publicKey);
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: convertedKey,
+    });
+
+    return sub.toJSON();
+  } catch (err) {
+    console.warn("Could not register Web Push subscription:", err);
+    return null;
+  }
+}
+
+/**
+ * Schedules server-side push notification for 15 minutes.
+ * When the app is closed or phone screen is off, the backend sends a push to FCM,
+ * which wakes up Android OS and rings the phone!
+ */
+export async function scheduleServerPushReminder({
+  delaySeconds = 15 * 60,
+  title = "⏰ Time for your next X post!",
+  body = "Your 15-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
+  reminderId = "active_post_reminder",
+} = {}) {
+  try {
+    const sub = await getOrRegisterPushSubscription();
+    if (!sub || !sub.endpoint) {
+      console.log("No push subscription available; relying on client-side timer.");
+      return false;
+    }
+
+    const apiBase = getApiBaseUrl();
+    const res = await fetch(`${apiBase}/api/reminders/schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subscription: sub,
+        delay_seconds: delaySeconds,
+        title,
+        body,
+        reminder_id: reminderId,
+      }),
+    });
+
+    if (res.ok) {
+      console.log(
+        `Server push scheduled in ${delaySeconds}s. Phone will wake and ring even if app is closed!`
+      );
+      return true;
+    }
+  } catch (err) {
+    console.warn("Failed to schedule server push reminder:", err);
+  }
+  return false;
+}
+
+/**
+ * Cancels pending server push reminder (e.g. if user clears drafts or posts earlier)
+ */
+export async function cancelServerPushReminder(reminderId = "active_post_reminder") {
+  try {
+    const apiBase = getApiBaseUrl();
+    await fetch(`${apiBase}/api/reminders/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reminder_id: reminderId }),
+    });
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Sends an immediate server-side test push to verify the sleeping phone can be woken up
+ */
+export async function sendServerTestPush({
+  title = "⏰ Postcraft Server Push Test!",
+  body = "Server push verified! This will wake your phone and ring after 15 minutes even with screen off.",
+} = {}) {
+  try {
+    const sub = await getOrRegisterPushSubscription();
+    if (!sub || !sub.endpoint) {
+      return false;
+    }
+
+    const apiBase = getApiBaseUrl();
+    const res = await fetch(`${apiBase}/api/notifications/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subscription: sub,
+        title,
+        body,
+      }),
+    });
+
+    return res.ok;
+  } catch (err) {
+    console.warn("Test push failed:", err);
+    return false;
+  }
+}
+
+/**
+ * Delivers native system notification via Service Worker (Client-Side).
+ * Rings native notification ringtone stream.
  */
 export async function showPostReminderNotification({
   title = "⏰ Time for your next X post!",
   body = "Your 15-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
   isTest = false,
 } = {}) {
-  // 1. Trigger physical vibration buzz
   triggerVibration([500, 200, 500, 200, 500]);
 
   if (!isNotificationSupported() || Notification.permission !== "granted") {
     return false;
   }
 
-  // Unique tag ensures Android treats each alert as a fresh event, ringing the notification tone
   const uniqueTag = isTest
     ? `postcraft-test-${Date.now()}`
     : `postcraft-reminder-${Date.now()}`;
 
   try {
-    // Service Worker notification: creates a high-priority system notification in the notification shade
     if ("serviceWorker" in navigator) {
       const reg = await navigator.serviceWorker.ready;
       if (reg && reg.showNotification) {
@@ -98,7 +249,6 @@ export async function showPostReminderNotification({
       }
     }
 
-    // Window context fallback (desktop)
     new Notification(title, {
       body,
       icon: "/favicon.png",
@@ -114,15 +264,10 @@ export async function showPostReminderNotification({
 }
 
 /**
- * STRICT REMINDER DISCIPLINE:
- * Checks whether a reminder is due, and ONLY rings if:
- * 1. The reminder was actively armed by a user posting a draft from that exact point.
- * 2. 15 minutes have elapsed since that post.
- * 3. It has not already notified.
- * 4. The post is not ancient/stale (within 3 min of expiration).
+ * STRICT CLIENT-SIDE REMINDER CHECK:
+ * Fallback watcher that checks if 15 minutes elapsed while the app was kept in foreground.
  */
 export async function checkAndTriggerReminder() {
-  // If not armed by a user post, NEVER ring
   if (!isReminderArmed()) {
     return false;
   }
@@ -137,21 +282,16 @@ export async function checkAndTriggerReminder() {
   const elapsed = now - lastTime;
   const remaining = COOLDOWN_DURATION_MS - elapsed;
 
-  // Still within the 15-minute wait
   if (remaining > 0) {
     return false;
   }
 
-  // If the user closed the app and came back hours later,
-  // do NOT blast a stale alarm unexpectedly! Disarm cleanly.
-  const maxLeniencyWindowMs = 3 * 60 * 1000; // 3 minutes grace
+  const maxLeniencyWindowMs = 3 * 60 * 1000;
   const isStale = elapsed - COOLDOWN_DURATION_MS > maxLeniencyWindowMs;
 
-  // Immediately disarm so it NEVER rings twice for this post
   disarmReminder();
   setReminderNotified(true);
 
-  // Broadcast event for UI state refresh
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent("postcraft:cooldown-complete", {
@@ -160,12 +300,10 @@ export async function checkAndTriggerReminder() {
     );
   }
 
-  // If expired hours ago, do not ring
   if (isStale) {
     return false;
   }
 
-  // Ring the notification ringtone at the 15-minute mark!
   if (areNotificationsEnabled()) {
     await showPostReminderNotification({
       title: "⏰ Time for your next X post!",
@@ -178,7 +316,7 @@ export async function checkAndTriggerReminder() {
   return true;
 }
 
-// Global singleton background watcher
+// Global background watcher initialization
 let workerInstance = null;
 let fallbackInterval = null;
 let isInitialized = false;
@@ -187,7 +325,13 @@ export function initReminderService() {
   if (isInitialized || typeof window === "undefined") return;
   isInitialized = true;
 
-  // 1. Web Worker for background ticking
+  // Pre-subscribe push if permission is already granted
+  if (isNotificationSupported() && Notification.permission === "granted") {
+    getOrRegisterPushSubscription().catch((e) =>
+      console.log("Push pre-registration:", e)
+    );
+  }
+
   try {
     if (window.Worker) {
       workerInstance = new Worker("/timerWorker.js");
@@ -200,12 +344,10 @@ export function initReminderService() {
     console.log("Dedicated timer worker not available, falling back to interval:", err);
   }
 
-  // 2. Fallback interval
   fallbackInterval = setInterval(() => {
     checkAndTriggerReminder();
   }, 1000);
 
-  // 3. Screen unlock / tab visibility wake-up listener
   if (typeof document !== "undefined") {
     const handleWake = () => {
       checkAndTriggerReminder();

@@ -29,6 +29,9 @@ import {
   getNotificationPermission,
   requestNotificationPermission,
   showPostReminderNotification,
+  scheduleServerPushReminder,
+  cancelServerPushReminder,
+  sendServerTestPush,
 } from "../utils/reminderService";
 
 export default function GeneratedPosts({
@@ -118,11 +121,27 @@ export default function GeneratedPosts({
     }
 
     setTestAlertSent(true);
-    await showPostReminderNotification({
-      title: "⏰ Postcraft 15m Reminder Ready!",
-      body: "Your phone is ready. A reminder like this will ring 15 minutes after each post.",
-      isTest: true,
-    });
+
+    // Try server-side push first (wakes up sleeping mobile phone via FCM)
+    let pushDelivered = false;
+    try {
+      pushDelivered = await sendServerTestPush({
+        title: "⏰ Postcraft Server Push Test!",
+        body: "Server push verified! This will wake your phone and ring after 15 minutes even with screen off.",
+      });
+    } catch {
+      pushDelivered = false;
+    }
+
+    // Fall back to local Service Worker notification if offline or push unavailable
+    if (!pushDelivered) {
+      await showPostReminderNotification({
+        title: "⏰ Postcraft 15m Reminder Ready!",
+        body: "Your phone is ready. A reminder like this will ring 15 minutes after each post.",
+        isTest: true,
+      });
+    }
+
     setTimeout(() => setTestAlertSent(false), 2500);
   };
 
@@ -183,11 +202,19 @@ export default function GeneratedPosts({
     // 2. Mark post as posted in localStorage
     onTogglePosted(post.id, true);
 
-    // 3. Trigger 20-minute anti-suspension cooldown & reminder
+    // 3. Trigger 15-minute anti-suspension cooldown & arm reminder
     setLastPostTimeToNow();
     setCooldownRemaining(COOLDOWN_DURATION_MS);
 
-    // 4. Open X intent (triggers native X mobile app on iOS/Android, or web compose)
+    // 4. Schedule server-side Web Push (wakes up mobile device even if app is closed or screen is off)
+    scheduleServerPushReminder({
+      delaySeconds: 15 * 60,
+      title: "⏰ Time for your next X post!",
+      body: "Your 15-minute safety interval has passed. Tap to open Postcraft and post your next draft.",
+      reminderId: "active_post_reminder",
+    });
+
+    // 5. Open X intent (triggers native X mobile app on iOS/Android, or web compose)
     const encodedText = encodeURIComponent(post.content);
     const xIntentUrl = `https://twitter.com/intent/tweet?text=${encodedText}`;
     window.open(xIntentUrl, "_blank", "noopener,noreferrer");
@@ -213,6 +240,7 @@ export default function GeneratedPosts({
     ) {
       onClearAll();
       setCooldownRemaining(0);
+      cancelServerPushReminder("active_post_reminder");
     }
   };
 

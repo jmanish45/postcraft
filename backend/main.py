@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from google.genai.errors import ServerError
@@ -6,11 +7,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
-from schemas import GenerateRequest, GenerateResponse
+from schemas import (
+    GenerateRequest,
+    GenerateResponse,
+    ScheduleReminderRequest,
+    CancelReminderRequest,
+    TestPushRequest,
+)
 from ai_service import (
     generate_drafts,
     AIConfigurationError,
     AIRateLimitError,
+)
+from push_service import (
+    get_vapid_public_key,
+    send_web_push,
+    schedule_delayed_push,
+    cancel_reminder,
 )
 
 
@@ -40,6 +53,55 @@ def health_check():
         "status": "healthy",
         "service": "Postcraft API"
     }
+
+
+@app.get("/api/notifications/vapid-public-key")
+@app.get("/notifications/vapid-public-key")
+def get_public_key():
+    return {"public_key": get_vapid_public_key()}
+
+
+@app.post("/api/reminders/schedule")
+@app.post("/reminders/schedule")
+async def schedule_reminder_endpoint(req: ScheduleReminderRequest):
+    payload = {
+        "title": req.title,
+        "body": req.body,
+        "url": "/",
+    }
+    await schedule_delayed_push(
+        reminder_id=req.reminder_id or "default",
+        subscription_info=req.subscription.model_dump(),
+        delay_seconds=req.delay_seconds,
+        payload=payload,
+    )
+    return {
+        "status": "scheduled",
+        "delay_seconds": req.delay_seconds,
+        "reminder_id": req.reminder_id,
+    }
+
+
+@app.post("/api/reminders/cancel")
+@app.post("/reminders/cancel")
+def cancel_reminder_endpoint(req: CancelReminderRequest):
+    cancelled = cancel_reminder(req.reminder_id)
+    return {"status": "cancelled" if cancelled else "not_found"}
+
+
+@app.post("/api/notifications/test")
+@app.post("/notifications/test")
+async def test_push_endpoint(req: TestPushRequest):
+    payload = {
+        "title": req.title,
+        "body": req.body,
+        "url": "/",
+    }
+    loop = asyncio.get_running_loop()
+    delivered = await loop.run_in_executor(
+        None, send_web_push, req.subscription.model_dump(), payload
+    )
+    return {"status": "delivered" if delivered else "failed"}
 
 
 @app.post(
